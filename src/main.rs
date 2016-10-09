@@ -4,7 +4,6 @@ mod parser;
 use data::{create_int, create_pair, create_nil, create_symbol};
 use parser::lex;
 
-// http://www.lwh.jp/lisp
 
 fn main() {
     let num = create_int(0);
