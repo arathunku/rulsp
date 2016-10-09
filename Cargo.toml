@@ -1,0 +1,6 @@
+[package]
+name = "rulsp"
+version = "0.1.0"
+authors = ["arathunku <arathunku@gmail.com>"]
+
+[dependencies]
