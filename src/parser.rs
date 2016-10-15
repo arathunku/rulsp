@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error as StdError;
-use std::result;
-// use regex crate to lex things, simpler, for now.
+use lexer::Token;
+use data::{AtomVal, c_int, c_nil, c_list, c_symbol};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -31,125 +31,74 @@ impl StdError for ParseError {
 }
 
 
-pub fn lex(str: String) -> Result<(u64, u64), ParseError> {
-    // const char *ws = " \t\n";
-    // const char *deli m = "() \t\n";
-    // const char *prefix = "()";
-
-    // str += strspn(str, ws);
-
-    // if (str[0] == '\0') {
-    //     *start = *end = NULL;
-    //     return Error_Syntax;
-    // }
-
-    // *start = str;
-
-    // if (strchr(prefix, str[0]) != NULL)
-    //     *end = str + 1;
-    // else
-    //     *end = str + strcspn(str, delim);
-
-    // return Error_OK;
-    Result::Err(ParseError::Syntax)
+pub struct Parser {
+    tokens: Vec<Token>,
 }
 
+impl Parser {
+    pub fn new(tokens: &Vec<Token>) -> Parser {
+        // TODO: avoid clone!!!
+        Parser { tokens: tokens.clone() }
+    }
 
-int parse_simple(const char *start, const char *end, Atom *result)
-{
-    char *buf, *p;
+    pub fn start(&self) -> Result<AtomVal, ParseError> {
+        match self.parse(0) {
+            Err(err) => Result::Err(err),
+            Ok((atom, _end)) => Result::Ok(atom),
+        }
+    }
 
-    /* Is it an integer? */
-    long val = strtol(start, &p, 10);
-    if (p == end) {
-	result->type = AtomType_Integer;
-    result->value.integer = val;
-return Error_OK;
-	}
+    pub fn parse(&self, pos: usize) -> Result<(AtomVal, usize), ParseError> {
+        if let Some(token) = self.pop(pos) {
+            if token.is_hidden() {
+                self.parse(pos + 1)
+            } else {
+                match token {
+                    &Token::Oparen => self.read_list(pos + 1),
+                    &Token::Cparen => Result::Ok((c_nil(), pos)),
+                    &Token::Int(num) => Result::Ok((c_int(num), pos)),
+                    &Token::Identifier(ref str) => Result::Ok((c_symbol(str.clone()), pos)),
+                    _ => Result::Err(ParseError::Syntax),
+                }
+            }
+        } else {
+            Result::Err(ParseError::Syntax)
+        }
+    }
 
-	/* NIL or symbol */
-	buf = malloc(end - start + 1);
-	p = buf;
-	while (start != end)
-		*p++ = toupper(*start), ++start;
-	*p = '\0';
+    fn pop(&self, pos: usize) -> Option<&Token> {
+        self.tokens.get(pos)
+    }
 
-	if (strcmp(buf, "NIL") == 0)
-		*result = nil;
-	else
-		*result = make_sym(buf);
+    fn read_list(&self, pos: usize) -> Result<(AtomVal, usize), ParseError> {
+        let mut atoms = vec![];
+        let mut pos = pos;
 
-	free(buf);
+        loop {
+            if let Some(token) = self.pop(pos) {
+                if !token.is_hidden() {
+                    match token {
+                        &Token::Cparen => {
+                            break;
+                        }
+                        _other => {
+                            match self.parse(pos) {
+                                Ok((atom, end)) => {
+                                    pos = end;
+                                    atoms.push(atom)
+                                }
+                                Err(err) => return Result::Err(err),
+                            }
+                        }
+                    }
+                }
+            } else {
+                return Result::Err(ParseError::Syntax);
+            }
 
-	return Error_OK;
+            pos += 1;
+        }
+
+        Result::Ok((c_list(atoms), pos))
+    }
 }
-
-// int read_list(const char *start, const char **end, Atom *result)
-// {
-//     Atom p;
-
-//     *end = start;
-//     p = *result = nil;
-
-//     for (;;) {
-// 	const char *token;
-// 	Atom item;
-// 	Error err;
-
-// 	err = lex(*end, &token, end);
-// 	if (err)
-// 	    return err;
-
-// 	if (token[0] == ')')
-// 	return Error_OK;
-
-//     if (token[0] == '.' && *end - token == 1) {
-// 	/* Improper list */
-// 	if (nilp(p))
-// 	    return Error_Syntax;
-
-// 	err = read_expr(*end, end, &item);
-// 	if (err)
-// 	    return err;
-
-// 	cdr(p) = item;
-
-// 	/* Read the closing ')' */
-// 	err = lex(*end, &token, end);
-// 	if (!err && token[0] != ')')
-// 	err = Error_Syntax;
-
-//     return err;
-// }
-
-// err = read_expr(token, end, &item);
-// if (err)
-//     return err;
-
-// if (nilp(p)) {
-//     /* First item */
-//     *result = cons(item, nil);
-//     p = *result;
-// } else {
-//     cdr(p) = cons(item, nil);
-//     p = cdr(p);
-// }
-// 	}
-// }
-
-// int read_expr(const char *input, const char **end, Atom *result)
-// {
-//     const char *token;
-//     Error err;
-
-//     err = lex(input, &token, end);
-//     if (err)
-// 	return err;
-
-//     if (token[0] == '(')
-// 	return read_list(*end, end, result);
-// 	else if (token[0] == ')')
-// 	return Error_Syntax;
-//     else
-// 	return parse_simple(token, *end, result);
-// }

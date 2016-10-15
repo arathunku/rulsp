@@ -1,17 +1,41 @@
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
+
 mod data;
+mod lexer;
 mod parser;
 
-use data::{create_int, create_pair, create_nil, create_symbol};
-use parser::lex;
+use data::{c_int, c_list, c_nil, c_symbol};
+use lexer::lex;
+use parser::Parser;
 
+fn eval(str: &str) {
+    let tokens = lex(str);
+    match tokens {
+        Ok(ref tokens) => {
+            let prefix = format!("parsed: {} -> {:?}", str, tokens);
+            let parser = Parser::new(tokens);
+            match parser.start() {
+                Ok(ast) => println!("{} -> {}", prefix, ast),
+                Err(err) => println!("{} -> error: {}", prefix, err),
+            }
+        }
+        Err(err) => println!("lex error: {} {}", str, err),
+    }
+}
 
 fn main() {
-    let num = create_int(0);
-    let pair = create_pair(create_pair(create_int(1), create_symbol(String::from("ok"))),
-                           create_pair(create_int(1), create_nil()));
+    c_list(vec![c_list(vec![c_int(1), c_symbol(String::from("ok"))]),
+                c_list(vec![c_int(1), c_nil()])]);
 
-    println!("{}", num);
-    println!("{}", pair);
-
-    println!("{:?}", lex("()".to_string()));
+    eval("(1 2 3 (4 5 (6, 7) (1 2) (3 4)))");
+    eval("(");
+    eval("()");
+    eval("))");
+    eval("1");
+    eval("(1 2)");
+    eval("(test NIl)");
+    eval("(- 2 3)");
+    eval("(+ 2 3)");
 }

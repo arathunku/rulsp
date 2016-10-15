@@ -1,42 +1,56 @@
 use std::fmt::*;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
-pub enum Atom {
+pub enum AtomType {
     Nil,
     Int(i64),
-    Symbol(Box<str>),
-    Pair(Box<Atom>, Box<Atom>),
+    Symbol(String),
+    List(Vec<AtomVal>),
 }
 
-pub fn create_nil() -> Atom {
-    Atom::Nil
+pub type AtomVal = Rc<AtomType>;
+
+pub fn c_nil() -> AtomVal {
+    Rc::new(AtomType::Nil)
 }
 
-pub fn create_int(num: i64) -> Atom {
-    Atom::Int(num)
+pub fn c_int(num: i64) -> AtomVal {
+    Rc::new(AtomType::Int(num))
 }
 
-pub fn create_symbol(symbol: String) -> Atom {
-    Atom::Symbol(symbol.to_uppercase().into_boxed_str())
+pub fn c_symbol(symbol: String) -> AtomVal {
+    if symbol.to_uppercase() == "NIL" {
+        c_nil()
+    } else {
+        Rc::new(AtomType::Symbol(symbol.to_uppercase()))
+    }
 }
 
-pub fn create_pair(car: Atom, cdr: Atom) -> Atom {
-    Atom::Pair(Box::new(car), Box::new(cdr))
+pub fn c_list(seq: Vec<AtomVal>) -> AtomVal {
+    Rc::new(AtomType::List(seq))
 }
 
-impl Display for Atom {
+pub fn c_env(parent: AtomVal) -> AtomVal {
+    c_list(vec![parent])
+}
+
+pub fn c_get(env: AtomVal, symbol: AtomVal) -> AtomVal {}
+
+impl Display for AtomType {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            &Atom::Int(num) => write!(f, "{}", num),
-            &Atom::Pair(ref car, ref cdr) => {
-                match cdr.as_ref() {
-                    &Atom::Nil => write!(f, "({})", car),
-                    _ => write!(f, "({} {})", car, cdr),
+            &AtomType::Int(num) => write!(f, "{}", num),
+            &AtomType::List(ref seq) => {
+                let list = seq.iter()
+                    .map(|ref v| format!("{}", v))
+                    .collect::<Vec<_>>()
+                    .join(" ");
 
-                }
+                write!(f, "({})", list)
             }
-            &Atom::Nil => write!(f, ""),
-            &Atom::Symbol(ref symbol) => write!(f, "{}", symbol),
+            &AtomType::Nil => write!(f, "NIL"),
+            &AtomType::Symbol(ref symbol) => write!(f, "{}", symbol),
         }
     }
 }
@@ -44,67 +58,44 @@ impl Display for Atom {
 
 #[cfg(test)]
 mod tests {
-    use super::create_nil;
-    use super::create_int;
-    use super::create_symbol;
-    use super::create_pair;
-    use super::Atom;
+    use super::c_nil;
+    use super::c_int;
+    use super::c_symbol;
+    use super::c_list;
 
     #[test]
     fn test_nil() {
-        assert_eq!(create_nil(), Atom::Nil);
+        assert_eq!(format!("{}", c_nil()), "NIL");
     }
 
     #[test]
     fn test_int() {
-        let foo = create_int(0);
-
-        assert_eq!(foo, Atom::Int(0));
+        assert_eq!(format!("{}", c_int(0)), "0");
     }
 
     #[test]
     fn test_symbol() {
-        assert_eq!(create_symbol(String::from("test")),
-                   Atom::Symbol(String::from("TEST").into_boxed_str()));
+        assert_eq!(format!("{}", c_symbol(String::from("test"))), "TEST");
     }
 
     #[test]
-    fn test_simple_pair() {
-        let foo = create_int(0);
-        let bar = create_int(1);
-        let pair = create_pair(foo, bar);
+    fn test_seq() {
+        let foo = c_int(0);
+        let bar = c_int(1);
+        let list = c_list(vec![foo, bar]);
 
-        match pair {
-            Atom::Pair(a, b) => {
-                assert_eq!(*a, Atom::Int(0));
-                assert_eq!(*b, Atom::Int(1))
-            }
-            _ => unimplemented!(),
-        }
+        assert_eq!(format!("{}", list), "(0 1)");
     }
 
     #[test]
-    fn test_nested_pair() {
-        let foo = create_int(0);
-        let bar = create_int(1);
-        let baz = create_int(2);
-        let pair = create_pair(foo, bar);
-        let pair2 = create_pair(pair, baz);
+    fn test_nested_seq() {
+        let foo = c_int(0);
+        let bar = c_int(1);
+        let baz = c_int(2);
+        let list = c_list(vec![foo, bar]);
+        let list2 = c_list(vec![list, baz]);
 
-        match pair2 {
-            Atom::Pair(a, b) => {
-                let pair = *a;
-                match pair {
-                    Atom::Pair(c, d) => {
-                        assert_eq!(*c, Atom::Int(0));
-                        assert_eq!(*d, Atom::Int(1));
-                    }
-                    _ => unimplemented!(),
-                }
 
-                assert_eq!(*b, Atom::Int(2));
-            }
-            _ => unimplemented!(),
-        }
+        assert_eq!(format!("{}", list2), "((0 1) 2)");
     }
 }
