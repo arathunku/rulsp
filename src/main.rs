@@ -5,6 +5,7 @@ extern crate lazy_static;
 mod data;
 mod lexer;
 mod parser;
+mod env;
 
 use data::{c_int, c_list, c_nil, c_symbol};
 use lexer::lex;

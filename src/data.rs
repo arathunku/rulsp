@@ -31,12 +31,6 @@ pub fn c_list(seq: Vec<AtomVal>) -> AtomVal {
     Rc::new(AtomType::List(seq))
 }
 
-pub fn c_env(parent: AtomVal) -> AtomVal {
-    c_list(vec![parent])
-}
-
-pub fn c_get(env: AtomVal, symbol: AtomVal) -> AtomVal {}
-
 impl Display for AtomType {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
