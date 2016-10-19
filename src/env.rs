@@ -100,7 +100,7 @@ mod tests {
         env_set(&env, &c_symbol(String::from("Test")), c_int(10));
         env_set(&env, &c_symbol(String::from("Gra")), c_int(5));
 
-        assert_eq!(format!("{}", *env.borrow()), "{GRA 5 TEST 10}");
+        assert_eq!(format!("{}", *env.borrow()), "{Gra 5 Test 10}");
     }
 
     #[test]
@@ -125,7 +125,7 @@ mod tests {
     fn test_get_missing_value() {
         let env = c_env(None);
 
-        assert_eq!("NIL",
+        assert_eq!("nil",
                    format!("{}",
                            env_get(&env, &c_symbol(String::from("Missing"))).unwrap()));
     }

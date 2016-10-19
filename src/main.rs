@@ -6,6 +6,7 @@ mod data;
 mod lexer;
 mod parser;
 mod env;
+mod eval;
 
 use data::{c_int, c_list, c_nil, c_symbol};
 use lexer::lex;
@@ -15,10 +16,16 @@ fn eval(str: &str) {
     let tokens = lex(str);
     match tokens {
         Ok(ref tokens) => {
-            let prefix = format!("parsed: {} -> {:?}", str, tokens);
+            let prefix = format!("{} -> {:?}", str, tokens);
             let parser = Parser::new(tokens);
             match parser.start() {
-                Ok(ast) => println!("{} -> {}", prefix, ast),
+                Ok(ast) => {
+                    print!("{} -> {}", prefix, ast);
+                    match eval::eval(ast) {
+                        Ok(result) => println!(" -> {}", result),
+                        Err(err) => println!(" -> {:?}", err),
+                    }
+                }
                 Err(err) => println!("{} -> error: {}", prefix, err),
             }
         }
@@ -39,4 +46,5 @@ fn main() {
     eval("(test NIl)");
     eval("(- 2 3)");
     eval("(+ 2 3)");
+    eval("(+ 0 (+ 2 2) (+ 1 1))");
 }

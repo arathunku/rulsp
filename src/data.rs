@@ -1,5 +1,7 @@
 use std::fmt::*;
 use std::rc::Rc;
+use std::error::Error as StdError;
+use std::result;
 
 #[derive(Debug, PartialEq)]
 pub enum AtomType {
@@ -9,7 +11,14 @@ pub enum AtomType {
     List(Vec<AtomVal>),
 }
 
+// TODO: Add more info about on WHAT and WHERE evaluation has happend
+#[derive(Debug)]
+pub enum AtomError {
+    ErrEval,
+}
+
 pub type AtomVal = Rc<AtomType>;
+pub type AtomRet = result::Result<AtomVal, AtomError>;
 
 pub fn c_nil() -> AtomVal {
     Rc::new(AtomType::Nil)
@@ -20,10 +29,10 @@ pub fn c_int(num: i64) -> AtomVal {
 }
 
 pub fn c_symbol(symbol: String) -> AtomVal {
-    if symbol.to_uppercase() == "NIL" {
+    if symbol.to_uppercase() == "nil" {
         c_nil()
     } else {
-        Rc::new(AtomType::Symbol(symbol.to_uppercase()))
+        Rc::new(AtomType::Symbol(symbol))
     }
 }
 
@@ -43,11 +52,20 @@ impl Display for AtomType {
 
                 write!(f, "({})", list)
             }
-            &AtomType::Nil => write!(f, "NIL"),
+            &AtomType::Nil => write!(f, "nil"),
             &AtomType::Symbol(ref symbol) => write!(f, "{}", symbol),
         }
     }
 }
+
+impl Display for AtomError {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            &AtomError::ErrEval => write!(f, "Eval Error"),
+        }
+    }
+}
+
 
 
 #[cfg(test)]
@@ -59,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_nil() {
-        assert_eq!(format!("{}", c_nil()), "NIL");
+        assert_eq!(format!("{}", c_nil()), "nil");
     }
 
     #[test]
@@ -69,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_symbol() {
-        assert_eq!(format!("{}", c_symbol(String::from("test"))), "TEST");
+        assert_eq!(format!("{}", c_symbol(String::from("test"))), "test");
     }
 
     #[test]
