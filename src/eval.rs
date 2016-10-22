@@ -1,18 +1,38 @@
 use data::{AtomVal, AtomType, AtomRet, AtomError, c_int};
+use std::fmt;
 
+fn int_op<F>(f: F, args: Vec<AtomVal>) -> AtomRet
+    where F: FnOnce(Vec<i64>) -> i64
+{
 
-fn add(args: Vec<AtomVal>) -> AtomRet {
-    let mut acc = 0;
+    let mut ints = vec![];
     for arg in args.iter() {
-        match **arg {
-            AtomType::Int(i) => acc += i,
-            _ => return Err(AtomError::ErrEval),
+        let value = try!(eval(arg.clone()));
+
+        match *value {
+            AtomType::Int(i) => ints.push(i),
+            ref v => return Err(AtomError::InvalidType("Int".to_string(), v.format(true))),
         }
     }
 
-    Ok(c_int(acc))
+    Result::Ok(c_int(f(ints)))
 }
 
+fn add(args: Vec<AtomVal>) -> AtomRet {
+    int_op(|values| values.iter().fold(0i64, |acc, v| acc + v), args)
+}
+
+fn sub(args: Vec<AtomVal>) -> AtomRet {
+    int_op(|values| values.iter().fold(0i64, |acc, v| acc - v), args)
+}
+
+fn mul(args: Vec<AtomVal>) -> AtomRet {
+    int_op(|values| values.iter().fold(0i64, |acc, v| acc * v), args)
+}
+
+fn div(args: Vec<AtomVal>) -> AtomRet {
+    int_op(|values| values.iter().fold(0i64, |acc, v| acc / v), args)
+}
 
 fn eval_list(ast: AtomVal) -> AtomRet {
     match *ast {
@@ -22,21 +42,21 @@ fn eval_list(ast: AtomVal) -> AtomRet {
                 Some(op) => {
                     match **op {
                         AtomType::Symbol(ref v) => v,
-                        _ => return Err(AtomError::ErrEval),
+                        ref v => {
+                            return Err(AtomError::InvalidType("Symbol".to_string(), v.format(true)))
+                        }
                     }
                 }
             };
-            let mut args: Vec<AtomVal> = vec![];
-            for atom in seq[1..seq.len()].iter() {
-                match eval(atom.clone()) {
-                    Ok(result) => args.push(result),
-                    Err(err) => return Err(err),
-                }
-            }
+
+            let args = seq[1..seq.len()].iter().map(|v| v.clone()).collect();
 
             match op.as_str() {
                 "+" => add(args),
-                _ => Err(AtomError::ErrEval),
+                "-" => sub(args),
+                "*" => mul(args),
+                "/" => div(args),
+                op => Err(AtomError::InvalidOperation(op.to_string())),
             }
         }
         _ => unreachable!(),
@@ -51,22 +71,23 @@ pub fn eval(ast: AtomVal) -> AtomRet {
 }
 
 
-pub fn print(v: AtomRet) -> String {
-    match v {
-        Ok(ref atom) => format!("{}", atom),
-        Err(err) => format!("{}", err),
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
-    use super::{eval, print};
-    use super::super::data::{c_symbol, c_int, c_list};
+    use super::eval;
+    use super::super::data::{c_symbol, c_int, c_list, AtomRet, AtomError};
     use super::super::env::{c_env, Env};
 
-    fn env() -> Env {
-        c_env(None)
+    pub fn print(v: AtomRet) -> String {
+        match v {
+            Ok(ref atom) => format!("{}", atom),
+            Err(err) => format!("{}", err),
+        }
+    }
+
+
+    fn env() {
+        // c_env(None)
     }
 
     #[test]
@@ -81,8 +102,21 @@ mod tests {
     }
 
     #[test]
-    fn eval_list_error() {
-        assert_eq!("Eval Error", print(eval(c_list(vec![c_int(1), c_int(2)]))));
+    fn eval_list_invalid_type_because_operation_is_int() {
+        match eval(c_list(vec![c_int(1), c_int(2)])) {
+            Err(AtomError::InvalidType(_, _)) => {}
+            Err(_) => unreachable!(),
+            Ok(_) => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn eval_list_invalid_operation() {
+        match eval(c_list(vec![c_symbol("undefined".to_string()), c_int(2)])) {
+            Err(AtomError::InvalidOperation(_)) => {}
+            Err(_) => unreachable!(),
+            Ok(_) => unreachable!(),
+        }
     }
 
     #[test]

@@ -42,10 +42,7 @@ impl Parser {
     }
 
     pub fn start(&self) -> Result<AtomVal, ParseError> {
-        match self.parse(0) {
-            Err(err) => Result::Err(err),
-            Ok((atom, _end)) => Result::Ok(atom),
-        }
+        self.parse(0).and_then(|(atom, _end)| Result::Ok(atom))
     }
 
     pub fn parse(&self, pos: usize) -> Result<(AtomVal, usize), ParseError> {
@@ -57,7 +54,12 @@ impl Parser {
                     &Token::Oparen => self.read_list(pos + 1),
                     &Token::Cparen => Result::Ok((c_nil(), pos)),
                     &Token::Int(num) => Result::Ok((c_int(num), pos)),
-                    &Token::Identifier(ref str) => Result::Ok((c_symbol(str.clone()), pos)),
+                    &Token::Identifier(ref str) => {
+                        match str.as_str() {
+                            "nil" => Result::Ok((c_nil(), pos)),
+                            _ => Result::Ok((c_symbol(str.clone()), pos)),
+                        }
+                    }
                     _ => Result::Err(ParseError::Syntax),
                 }
             }

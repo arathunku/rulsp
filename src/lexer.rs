@@ -1,17 +1,26 @@
 use std::fmt;
 use std::error::Error as StdError;
 use regex::Regex;
+use std::cmp::Ordering;
 
 #[derive(Debug)]
 pub enum LexError {
     Syntax,
+    InvalidToken(String, String),
 }
 
 
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &LexError::Syntax => write!(f, "Syntax error"),
+        match *self {
+            LexError::Syntax => format!("{}", self.description()).fmt(f),
+            LexError::InvalidToken(ref code_token, ref found_token) => {
+                format!("{} expected: `{}`, found: `{}`",
+                        self.description(),
+                        code_token,
+                        found_token)
+                    .fmt(f)
+            }
         }
     }
 }
@@ -20,12 +29,13 @@ impl StdError for LexError {
     fn description(&self) -> &str {
         match *self {
             LexError::Syntax => "Syntax error",
+            LexError::InvalidToken(_, _) => "Invalid token",
         }
     }
 
     fn cause(&self) -> Option<&StdError> {
         match *self {
-            LexError::Syntax => None,
+            _ => None,
         }
     }
 }
@@ -48,6 +58,32 @@ impl Token {
     }
 }
 
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_hidden() {
+            write!(f, "")
+        } else {
+            write!(f, "{:?}", self)
+        }
+    }
+}
+
+pub fn format_tokens(tokens: &Vec<Token>) -> String {
+    let mut output = String::new();
+
+    output.push('[');
+    for token in tokens.iter() {
+        let formatted_token = &format!("{}", token);
+        if formatted_token != "" {
+            output.push_str(formatted_token);
+            output.push_str(", ")
+        }
+    }
+    output.push(']');
+
+    output
+}
+
 // Use regex set?
 lazy_static! {
     static ref TOKEN_MATCHES: Vec<(&'static str, Regex)> = {
@@ -55,8 +91,8 @@ lazy_static! {
             ("whitespace", Regex::new(r"^\s+").unwrap()),
             ("oparen", Regex::new(r"^\(").unwrap()),
             ("cparen", Regex::new(r"^\)").unwrap()),
-            ("identifier", Regex::new(r"^[A-Za-z\+-]+").unwrap()),
-            ("integer", Regex::new(r"[0-9]+").unwrap()),
+            ("integer", Regex::new(r"^[0-9]+").unwrap()),
+            ("identifier", Regex::new(r"^([^\s\(\)\[\]\{\}]+)").unwrap()),
         ]
     };
 }
@@ -70,8 +106,14 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
 
         match found_token {
             Ok((name, token)) => {
+                let code_token = &code[0..token.len()];
+
+                if token.cmp(code_token) != Ordering::Equal {
+                    return Result::Err(LexError::InvalidToken(code_token.to_string(),
+                                                              token.to_string()));
+                }
+
                 code = &code[token.len()..code.len()];
-                // println!("Token: {:?}, code: |{}|", token, code);
 
                 tokens.push(match name {
                     "whitespace" => Token::Whitespace,
@@ -92,12 +134,13 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
 
 fn lex_single_token(str: &str) -> Result<(&str, &str), LexError> {
     for &(ref name, ref matcher) in TOKEN_MATCHES.iter() {
-        if let Some(caps) = matcher.captures(str) {
-            if let Some(token_content) = caps.at(0) {
-                return Result::Ok((name, token_content));
-            }
-        }
+        let result = matcher.captures(str)
+            .and_then(|caps| caps.at(0))
+            .and_then(|token_content| Some((*name, token_content)));
 
+        if let Some(res) = result {
+            return Result::Ok(res);
+        }
     }
 
     Result::Err(LexError::Syntax)
