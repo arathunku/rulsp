@@ -37,15 +37,16 @@ fn main() {
     c_list(vec![c_list(vec![c_int(1), c_symbol(String::from("ok"))]),
                 c_list(vec![c_int(1), c_nil()])]);
 
-    eval("(+ 2 3 (5 4 5 (+ 2 7) (+ 2 2) (+ 3 4)))");
-    eval("(()");
-    eval("()");
-    eval("))");
-    eval("1");
-    eval("(1 2)");
-    eval("(test NIl)");
-    eval("(test nil)");
-    eval("(- 2 3)");
-    eval("(+ 2 3)");
-    eval("(+ 0 (+ 2 2) (- 1 1) (* 2 2) (/ 2 2))");
+    // eval("(+ 2 3 (5 4 5 (+ 2 7) (+ 2 2) (+ 3 4)))");
+    // eval("(()");
+    // eval("()");
+    // eval("))");
+    // eval("1");
+    // eval("(1 2)");
+    // eval("(test NIl)");
+    // eval("(test nil)");
+    // eval("(- 2 3)");
+    // eval("(+ 2 3)");
+    // eval("(+ 0 (+ 2 2) (- 1 1) (* 2 2) (/ 2 2))");
+    eval("(quote (+ 2 3))");
 }

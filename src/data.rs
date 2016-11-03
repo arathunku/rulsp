@@ -69,7 +69,7 @@ impl Display for AtomError {
             InvalidType(ref expected, ref got) => {
                 format!("expected: {}, received: {}", expected, got)
             }
-            InvalidOperation(ref op) => format!("operation: {}", op),
+            InvalidOperation(ref op) => format!("invalid operation: {}", op),
         };
 
         write!(f, "{}", output)

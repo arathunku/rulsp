@@ -1,4 +1,4 @@
-use data::{AtomVal, AtomType, AtomRet, AtomError, c_int};
+use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil};
 use std::fmt;
 
 fn int_op<F>(f: F, args: Vec<AtomVal>) -> AtomRet
@@ -34,6 +34,10 @@ fn div(args: Vec<AtomVal>) -> AtomRet {
     int_op(|values| values.iter().fold(0i64, |acc, v| acc / v), args)
 }
 
+fn quote(args: Vec<AtomVal>) -> AtomRet {
+    Result::Ok(args.get(0).map(|v| v.clone()).unwrap_or(c_nil()))
+}
+
 fn eval_list(ast: AtomVal) -> AtomRet {
     match *ast {
         AtomType::List(ref seq) => {
@@ -56,6 +60,7 @@ fn eval_list(ast: AtomVal) -> AtomRet {
                 "-" => sub(args),
                 "*" => mul(args),
                 "/" => div(args),
+                "quote" => quote(args),
                 op => Err(AtomError::InvalidOperation(op.to_string())),
             }
         }
