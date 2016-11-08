@@ -58,6 +58,7 @@ pub enum AtomError {
     InvalidType(String, String),
     // operation name
     InvalidOperation(String),
+    UndefinedSymbol(String),
 }
 
 
@@ -70,6 +71,7 @@ impl Display for AtomError {
                 format!("expected: {}, received: {}", expected, got)
             }
             InvalidOperation(ref op) => format!("invalid operation: {}", op),
+            UndefinedSymbol(ref op) => format!("undefined symbol: {}", op),
         };
 
         write!(f, "{}", output)

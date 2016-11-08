@@ -66,13 +66,13 @@ pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) {
 
 pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
     match env_find(env, key) {
-        None => Some(c_nil()),
+        None => None,
         Some(env) => {
             match **key {
                 AtomType::Symbol(ref k) => {
                     match env.borrow().data.get(k) {
                         Some(v) => Some(v.clone()),
-                        None => Some(c_nil()),
+                        None => None,
                     }
                 }
                 _ => unreachable!(),
@@ -125,8 +125,6 @@ mod tests {
     fn test_get_missing_value() {
         let env = c_env(None);
 
-        assert_eq!("nil",
-                   format!("{}",
-                           env_get(&env, &c_symbol(String::from("Missing"))).unwrap()));
+        assert!(env_get(&env, &c_symbol(String::from("Missing"))).is_none());
     }
 }
