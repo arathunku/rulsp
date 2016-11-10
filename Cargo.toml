@@ -6,3 +6,4 @@ authors = ["arathunku <arathunku@gmail.com>"]
 [dependencies]
 regex = "0.1.77"
 lazy_static = "0.1.*"
+rustyline = "1.0.0"

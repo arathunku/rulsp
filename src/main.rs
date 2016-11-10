@@ -1,6 +1,7 @@
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
+extern crate rustyline;
 
 mod data;
 mod lexer;
@@ -8,6 +9,8 @@ mod parser;
 mod env;
 mod eval;
 
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 use data::{c_int, c_list, c_nil, c_symbol};
 use env::{c_env, Env};
 use lexer::{lex, format_tokens};
@@ -46,19 +49,33 @@ fn repl(env: Env) {
     // (def foo (quote bar))
     // foo
 
+    let mut rl = Editor::<()>::new();
+    if let Err(_) = rl.load_history("history.txt") {
+        println!("No previous history.");
+    }
 
     loop {
-        let mut input = String::new();
-        match io::stdin().read_line(&mut input) {
-            Ok(_) => {
-                eval(input.as_str(), env.clone());
+        let readline = rl.readline(">> ");
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(&line);
+                eval(line.as_str(), env.clone());
             }
-            Err(error) => {
-                println!("error: {}", error);
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL-C");
+                break;
+            }
+            Err(ReadlineError::Eof) => {
+                println!("CTRL-D");
+                break;
+            }
+            Err(err) => {
+                println!("Error: {:?}", err);
                 break;
             }
         }
     }
+    rl.save_history("history.txt").unwrap();
 }
 
 fn main() {
