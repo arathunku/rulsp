@@ -47,13 +47,17 @@ fn sub(args: Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 fn mul(args: Vec<AtomVal>, env: Env) -> AtomRet {
-    int_op(|values| values.iter().fold(0i64, |acc, v| acc * v),
+    int_op(|values| values.iter().fold(1i64, |acc, v| acc * v),
            args,
            env)
 }
 
 fn div(args: Vec<AtomVal>, env: Env) -> AtomRet {
-    int_op(|values| values.iter().fold(0i64, |acc, v| acc / v),
+    int_op(|values| {
+               values.iter()
+                   .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y / x)))
+                   .unwrap_or(0)
+           },
            args,
            env)
 }
@@ -182,6 +186,13 @@ mod tests {
     fn eval_list_add() {
         assert_eq!("3",
                    print(eval(c_list(vec![c_symbol("+".to_string()), c_int(1), c_int(2)]),
+                              env())));
+    }
+
+    #[test]
+    fn eval_list_div() {
+        assert_eq!("2",
+                   print(eval(c_list(vec![c_symbol("/".to_string()), c_int(4), c_int(2)]),
                               env())));
     }
 }
