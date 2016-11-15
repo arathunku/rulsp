@@ -8,6 +8,7 @@ mod lexer;
 mod parser;
 mod env;
 mod eval;
+mod core;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -20,18 +21,18 @@ fn eval(str: &str, env: Env) {
     let tokens = lex(str);
     match tokens {
         Ok(ref tokens) => {
-            let prefix = "";//format!("exp: {} -> lex: {}", str, format_tokens(tokens));
+            let prefix = format!("exp: {} -> lex: {}", str, format_tokens(tokens));
             let parser = Parser::new(tokens);
             match parser.start() {
                 Ok(ast) => {
-                    // print!("{} -> ast: {}", prefix, ast.format(true));
+                    print!("{} -> ast: {}", prefix, ast.format(true));
 
                     match eval::eval(ast, env.clone()) {
                         Ok(result) => println!(" -> {}", result),
                         Err(err) => println!(" -> {}", err),
                     }
 
-                    // println!("{}", *(*env).borrow());
+                    println!("{}", *(*env).borrow());
                 }
                 Err(err) => println!("{} -> ast: {}", prefix, err),
             }
@@ -42,12 +43,6 @@ fn eval(str: &str, env: Env) {
 
 fn repl(env: Env) {
     use std::io;
-    // foo
-    // (quote foo)
-    // (def foo 99)
-    // foo
-    // (def foo (quote bar))
-    // foo
 
     let mut rl = Editor::<()>::new();
     if let Err(_) = rl.load_history("history.txt") {
@@ -79,8 +74,7 @@ fn repl(env: Env) {
 }
 
 fn main() {
-    let env = c_env(None);
-    repl(env);
+    let env = core::build();
     // c_list(vec![c_list(vec![c_int(1), c_symbol(String::from("ok"))]),
     // c_list(vec![c_int(1), c_nil()])]);
 
@@ -93,7 +87,7 @@ fn main() {
     // eval("(test NIl)");
     // eval("(test nil)");
     // eval("(- 2 3)");
-    // eval("(+ 2 3)");
+    // eval("(+ 2 3)", env.clone());
     // eval("(+ 0 (+ 2 2) (- 1 1) (* 2 2) (/ 2 2))");
     // eval("foo", env.clone());
     // eval("(quote foo)", env.clone());
@@ -101,4 +95,6 @@ fn main() {
     // eval("foo", env.clone());
     // eval("(def foo (quote bar))", env.clone());
     // eval("foo", env.clone());
+
+    repl(env);
 }

@@ -9,6 +9,7 @@ pub enum AtomType {
     Int(i64),
     Symbol(String),
     List(Vec<AtomVal>),
+    Func(fn(Vec<AtomVal>) -> AtomRet),
 }
 
 impl Display for AtomType {
@@ -32,6 +33,7 @@ impl AtomType {
                 }
                 &AtomType::Nil => format!("Nil()"),
                 &AtomType::Symbol(ref symbol) => format!("Symbol({})", symbol),
+                &AtomType::Func(_) => format!("#func"),
             }
         } else {
             match self {
@@ -46,6 +48,7 @@ impl AtomType {
                 }
                 &AtomType::Nil => format!("nil"),
                 &AtomType::Symbol(ref symbol) => format!("{}", symbol),
+                &AtomType::Func(_) => format!("#func"),
             }
         }
     }
@@ -99,6 +102,10 @@ pub fn c_symbol(symbol: String) -> AtomVal {
 
 pub fn c_list(seq: Vec<AtomVal>) -> AtomVal {
     Rc::new(AtomType::List(seq))
+}
+
+pub fn c_func(f: fn(Vec<AtomVal>) -> AtomRet) -> AtomVal {
+    Rc::new(AtomType::Func(f))
 }
 
 #[cfg(test)]
