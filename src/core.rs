@@ -25,7 +25,12 @@ fn add(args: Vec<AtomVal>) -> AtomRet {
 }
 
 fn sub(args: Vec<AtomVal>) -> AtomRet {
-    int_op(|values| values.iter().fold(0i64, |acc, v| acc - v), args)
+    int_op(|values| {
+               values.iter()
+                   .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y - x)))
+                   .unwrap_or(0)
+           },
+           args)
 }
 
 fn mul(args: Vec<AtomVal>) -> AtomRet {
