@@ -82,7 +82,6 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("/".to_string()), c_func(div));
     env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
     env_set(&env, &c_symbol("car".to_string()), c_func(car));
-    env_set(&env, &c_symbol("cdr".to_string()), c_func(cdr));
 
     env
 }
