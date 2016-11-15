@@ -9,6 +9,7 @@ pub enum AtomType {
     Int(i64),
     Symbol(String),
     List(Vec<AtomVal>),
+    Vec(Vec<AtomVal>),
     Func(fn(Vec<AtomVal>) -> AtomRet),
 }
 
@@ -31,6 +32,14 @@ impl AtomType {
 
                     format!("List({})", list)
                 }
+                &AtomType::Vec(ref vec) => {
+                    let list = vec.iter()
+                        .map(|ref v| v.format(true))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+
+                    format!("Vec({})", list)
+                }
                 &AtomType::Nil => format!("Nil()"),
                 &AtomType::Symbol(ref symbol) => format!("Symbol({})", symbol),
                 &AtomType::Func(_) => format!("#func"),
@@ -40,6 +49,14 @@ impl AtomType {
                 &AtomType::Int(num) => format!("{}", num),
                 &AtomType::List(ref seq) => {
                     let list = seq.iter()
+                        .map(|ref v| v.format(false))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+
+                    format!("({})", list)
+                }
+                &AtomType::Vec(ref vec) => {
+                    let list = vec.iter()
                         .map(|ref v| v.format(false))
                         .collect::<Vec<_>>()
                         .join(" ");
@@ -108,12 +125,18 @@ pub fn c_func(f: fn(Vec<AtomVal>) -> AtomRet) -> AtomVal {
     Rc::new(AtomType::Func(f))
 }
 
+
+pub fn c_vec(seq: Vec<AtomVal>) -> AtomVal {
+    Rc::new(AtomType::Vec(seq))
+}
+
 #[cfg(test)]
 mod tests {
     use super::c_nil;
     use super::c_int;
     use super::c_symbol;
     use super::c_list;
+    use super::c_vec;
 
     #[test]
     fn test_nil() {
@@ -131,12 +154,19 @@ mod tests {
     }
 
     #[test]
-    fn test_seq() {
+    fn test_list() {
         let foo = c_int(0);
         let bar = c_int(1);
         let list = c_list(vec![foo, bar]);
 
         assert_eq!(format!("{}", list), "(0 1)");
+    }
+
+    #[test]
+    fn test_vec() {
+        let vec = c_vec(vec![c_int(0), c_int(1)]);
+
+        assert_eq!(format!("{}", vec), "(0 1)");
     }
 
     #[test]

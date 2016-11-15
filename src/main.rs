@@ -12,12 +12,12 @@ mod core;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use data::{c_int, c_list, c_nil, c_symbol};
+use data::{c_int, c_list, c_nil, c_symbol, AtomRet};
 use env::{c_env, Env};
 use lexer::{lex, format_tokens};
 use parser::Parser;
 
-fn eval(str: &str, env: Env) {
+fn eval(str: &str, env: Env) -> AtomRet {
     let tokens = lex(str);
     match tokens {
         Ok(ref tokens) => {
@@ -28,16 +28,30 @@ fn eval(str: &str, env: Env) {
                     print!("{} -> ast: {}", prefix, ast.format(true));
 
                     match eval::eval(ast, env.clone()) {
-                        Ok(result) => println!(" -> {}", result),
-                        Err(err) => println!(" -> {}", err),
+                        Ok(result) => {
+                            println!(" -> {}", result);
+                            // println!("{}", *(*env).borrow());
+                            return Ok(result);
+                        }
+                        Err(err) => {
+                            println!(" -> {}", err);
+                            return Err(err);
+                        }
                     }
 
-                    println!("{}", *(*env).borrow());
                 }
-                Err(err) => println!("{} -> ast: {}", prefix, err),
+                Err(err) => {
+                    println!("{} -> ast: {}", prefix, err);
+                    // FIXME: should return correct err;
+                    return Ok(c_nil());
+                }
             }
         }
-        Err(err) => println!("lex: {} {}", str, err),
+        Err(err) => {
+            println!("lex: {} {}", str, err);
+            // FIXME: should return correct err;
+            return Ok(c_nil());
+        }
     }
 }
 
@@ -97,4 +111,32 @@ fn main() {
     // eval("foo", env.clone());
 
     repl(env);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::eval;
+    use super::core;
+    use ::env::{Env, env_get};
+    use ::data::{AtomRet, c_int, c_symbol};
+
+    pub fn print(v: AtomRet) -> String {
+        match v {
+            Ok(ref atom) => format!("{}", atom),
+            Err(err) => format!("{}", err),
+        }
+    }
+
+    fn env() -> Env {
+        core::build()
+    }
+
+    #[test]
+    fn eval_define() {
+        let env = env();
+        eval("(def foo 1)", env.clone());
+
+        assert_eq!(env_get(&env, &c_symbol("foo".to_string())).unwrap(),
+                   c_int(1));
+    }
 }

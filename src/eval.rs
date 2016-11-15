@@ -27,6 +27,7 @@ fn def(args: Vec<AtomVal>, env: Env) -> AtomRet {
         }
     }
 }
+
 fn eval_each(args: Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
     let mut evaled_args = vec![];
     for arg in args {
@@ -56,6 +57,10 @@ fn eval_list(ast: AtomVal, env: Env) -> AtomRet {
             match opName {
                 "quote" => quote(args),
                 "def" => def(args, env),
+                "print_env" => {
+                    println!("{:#?}", env);
+                    Ok(c_nil())
+                }
                 // Some function call with evaled arguments
                 _ => {
                     let evaled_args = eval_each(args, env.clone())?;
