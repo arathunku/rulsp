@@ -1,10 +1,10 @@
-use super::data::{AtomVal, AtomType, c_nil};
+use super::data::{AtomVal, AtomType, AtomRet, AtomError, c_nil};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EnvType {
     parent: Option<Env>,
     data: HashMap<String, AtomVal>,
@@ -79,7 +79,19 @@ pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
             }
         }
     }
+}
 
+pub fn env_bind(env: &Env, params: AtomVal, args: Vec<AtomVal>) -> AtomRet {
+    match *params {
+        AtomType::List(ref variables) => {
+            for (index, variable) in variables.iter().enumerate() {
+                env_set(env, variable, args.get(0).unwrap_or(&c_nil()).clone())
+            }
+
+            Ok(c_nil())
+        }
+        _ => Err(AtomError::InvalidType("list".to_string(), params.format(true))),
+    }
 }
 
 #[cfg(test)]

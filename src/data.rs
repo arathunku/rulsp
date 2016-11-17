@@ -2,6 +2,7 @@ use std::fmt::*;
 use std::rc::Rc;
 use std::error::Error as StdError;
 use std::result;
+use env::Env;
 
 #[derive(Debug, PartialEq)]
 pub enum AtomType {
@@ -11,6 +12,15 @@ pub enum AtomType {
     List(Vec<AtomVal>),
     Vec(Vec<AtomVal>),
     Func(fn(Vec<AtomVal>) -> AtomRet),
+    AFunc(AFuncData), // user defined function
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AFuncData {
+    pub exp: AtomVal,
+    pub env: Env,
+    pub params: AtomVal,
 }
 
 impl Display for AtomType {
@@ -43,6 +53,7 @@ impl AtomType {
                 &AtomType::Nil => format!("Nil()"),
                 &AtomType::Symbol(ref symbol) => format!("Symbol({})", symbol),
                 &AtomType::Func(_) => format!("#func"),
+                &AtomType::AFunc(_) => format!("#builtin_func"),
             }
         } else {
             match self {
@@ -66,7 +77,27 @@ impl AtomType {
                 &AtomType::Nil => format!("nil"),
                 &AtomType::Symbol(ref symbol) => format!("{}", symbol),
                 &AtomType::Func(_) => format!("#func"),
+                &AtomType::AFunc(_) => format!("#builtin_func"),
             }
+        }
+    }
+
+
+    pub fn apply(&self, args: Vec<AtomVal>) -> AtomRet {
+        use eval::eval;
+        use env::{c_env, env_bind, Env};
+
+        match *self {
+            AtomType::Func(f) => f(args),
+            AtomType::AFunc(ref fd) => {
+                let fd = fd.clone();
+                let func_env = c_env(Some(fd.env.clone()));
+
+                env_bind(&func_env, fd.params, args)?;
+
+                eval(fd.exp, func_env)
+            },
+            _ => Err(AtomError::InvalidType("function".to_string(), self.format(true)))
         }
     }
 }
@@ -128,6 +159,10 @@ pub fn c_func(f: fn(Vec<AtomVal>) -> AtomRet) -> AtomVal {
 
 pub fn c_vec(seq: Vec<AtomVal>) -> AtomVal {
     Rc::new(AtomType::Vec(seq))
+}
+
+pub fn c_afunc(env: Env, params: AtomVal, exp: AtomVal) -> AtomVal {
+    Rc::new(AtomType::AFunc(AFuncData { exp, env, params }))
 }
 
 #[cfg(test)]

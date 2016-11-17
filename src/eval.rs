@@ -1,4 +1,4 @@
-use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list};
+use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc, AFuncData};
 use env::{c_env, env_set, env_get, Env};
 use std::fmt;
 
@@ -7,17 +7,17 @@ fn safe_get(args: Vec<AtomVal>, index: usize) -> AtomVal {
 }
 
 fn quote(args: Vec<AtomVal>) -> AtomRet {
-    Result::Ok(safe_get(args, 0))
+    Result::Ok(safe_get(args, 1))
 }
 
 fn def(args: Vec<AtomVal>, env: Env) -> AtomRet {
-    let name = try!(args.get(0)
+    let name = try!(args.get(1)
         .map(|v| v.clone())
         .ok_or(AtomError::InvalidType("Symbol as name of def".to_string(), "nil".to_string())));
 
     match *name {
         AtomType::Symbol(_) => {
-            let value = try!(eval(safe_get(args, 1).clone(), c_env(Some(env.clone()))));
+            let value = try!(eval(safe_get(args, 2).clone(), c_env(Some(env.clone()))));
 
             env_set(&env.clone(), &name, value);
             Result::Ok(c_nil())
@@ -26,6 +26,10 @@ fn def(args: Vec<AtomVal>, env: Env) -> AtomRet {
             return Err(AtomError::InvalidType("Symbol as name of def".to_string(), v.format(true)));
         }
     }
+}
+
+fn lambda(args: Vec<AtomVal>, env: Env) -> AtomRet {
+    Ok(c_afunc(env, safe_get(args.clone(), 1), safe_get(args.clone(), 2)))
 }
 
 fn eval_each(args: Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
@@ -37,41 +41,39 @@ fn eval_each(args: Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
     Ok(evaled_args)
 }
 
-fn eval_list(ast: AtomVal, env: Env) -> AtomRet {
+fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
+    println!("ast: {:?}", ast);
+
     match *ast {
-        AtomType::List(ref seq) => {
-            let (op, opName) = match seq.get(0) {
+        AtomType::List(ref args) => {
+            let opName = match args.get(0) {
                 None => return Ok(ast.clone()),
                 Some(op) => {
                     match **op {
-                        AtomType::Symbol(ref v) => (op, v.as_str()),
-                        ref v => {
-                            return Err(AtomError::InvalidType("Symbol".to_string(), v.format(true)))
-                        }
+                        AtomType::Symbol(ref v) => v.as_str(),
+                        _ => "__func__",
                     }
                 }
             };
 
-            let args = seq[1..seq.len()].iter().map(|v| v.clone()).collect();
-
             match opName {
-                "quote" => quote(args),
-                "def" => def(args, env),
+                "quote" => quote((*args).clone()),
+                "def" => def((*args).clone(), env),
                 "print_env" => {
                     println!("{:#?}", env);
                     Ok(c_nil())
                 }
+                "fn*" => lambda((*args).clone(), env),
                 // Some function call with evaled arguments
                 _ => {
-                    let evaled_args = eval_each(args, env.clone())?;
-                    if let Some(value) = env_get(&env, op) {
-                        match *value {
-                            AtomType::Func(f) => f(evaled_args),
-                            _ => Err(AtomError::InvalidOperation(opName.to_string())),
-                        }
-                    } else {
-                        Err(AtomError::InvalidOperation(opName.to_string()))
-                    }
+                    let evaled_args = eval_ast(ast.clone(), env.clone())?;
+                    let args = match *evaled_args {
+                        AtomType::List(ref args) => args,
+                        _ => return Err(AtomError::InvalidOperation(opName.to_string())),
+                    };
+
+                    let subject_func = &args[0].clone();
+                    subject_func.apply(args[1..].to_vec())
                 }
 
             }
@@ -80,9 +82,12 @@ fn eval_list(ast: AtomVal, env: Env) -> AtomRet {
     }
 }
 
-pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
+fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(_) => eval_list(ast.clone(), env),
+        AtomType::List(ref seq) => {
+            let args = eval_each(seq.clone(), env)?;
+            Ok(c_list(args))
+        }
         AtomType::Symbol(ref name) => {
             if let Some(atom) = env_get(&env, &ast.clone()) {
                 Ok(atom.clone())
@@ -91,6 +96,13 @@ pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
             }
         }
         _ => Ok(ast.clone()),
+    }
+}
+
+pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
+    match *ast {
+        AtomType::List(_) => eval_exp(ast.clone(), env),
+        _ => eval_ast(ast.clone(), env),
     }
 }
 
@@ -137,7 +149,7 @@ mod tests {
     fn eval_list_invalid_operation() {
         match eval(c_list(vec![c_symbol("undefined".to_string()), c_int(2)]),
                    env()) {
-            Err(AtomError::InvalidOperation(_)) => {}
+            Err(AtomError::UndefinedSymbol(_)) => {}
             Err(_) => unreachable!(),
             Ok(_) => unreachable!(),
         }

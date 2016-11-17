@@ -1,3 +1,5 @@
+#![feature(field_init_shorthand)]
+
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
@@ -138,5 +140,22 @@ mod tests {
 
         assert_eq!(env_get(&env, &c_symbol("foo".to_string())).unwrap(),
                    c_int(1));
+    }
+
+    #[test]
+    fn eval_lambda() {
+        let env = env();
+        assert_eq!(eval("((fn* (x) (- x 2)) 7)", env.clone()).unwrap(),
+                   c_int(5));
+    }
+
+    #[test]
+    fn eval_lambda_nested() {
+        let env = env();
+        eval("(def make-adder (fn* (x) (fn* (y) (+ x y))))", env.clone());
+        eval("(def add-two (make-adder 2))", env.clone());
+
+        assert_eq!(eval("(add-two 5)", env.clone()).unwrap(),
+                   c_int(7));
     }
 }
