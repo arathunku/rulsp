@@ -71,6 +71,20 @@ fn cdr(args: Vec<AtomVal>) -> AtomRet {
     }
 }
 
+fn partialeq(args: Vec<AtomVal>) -> AtomRet {
+    let mut output = c_int(1);
+    for (i, arg) in args.iter().enumerate() {
+        let next_arg = args.get(i + 1);
+        if next_arg.is_some() {
+            if (next_arg.unwrap() != arg) {
+                output = c_nil();
+            };
+        }
+    }
+
+    Ok(output)
+}
+
 
 
 pub fn build() -> Env {
@@ -82,6 +96,10 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("/".to_string()), c_func(div));
     env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
     env_set(&env, &c_symbol("car".to_string()), c_func(car));
+
+    // predicates
+    env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
+    // env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
 
     env
 }

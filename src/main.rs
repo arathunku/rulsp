@@ -158,4 +158,25 @@ mod tests {
         assert_eq!(eval("(add-two 5)", env.clone()).unwrap(),
                    c_int(7));
     }
+
+    #[test]
+    fn eval_simple_if() {
+        let env = env();
+
+        assert_eq!(eval("(if nil 2 3)", env.clone()).unwrap(),
+                   c_int(3));
+        assert_eq!(eval("(if 1 2 3)", env.clone()).unwrap(),
+                   c_int(2));
+    }
+
+    #[test]
+    fn eval_predicated() {
+        assert_eq!(eval("(= 2 2)", env()).unwrap(),
+                   c_int(1));
+
+        let env = env();
+        eval("(def foo 2)", env.clone());
+        assert_eq!(eval("(= 2 foo)", env.clone()).unwrap(),
+                   c_int(1));
+    }
 }

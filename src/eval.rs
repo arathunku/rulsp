@@ -33,7 +33,11 @@ fn op_lambda(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
-    unreachable!()
+    let result = eval_ast(safe_get(args, 1), env.clone())?;
+    match *result {
+        AtomType::Nil => eval_ast(safe_get(args, 3), env.clone()),
+        _ => eval_ast(safe_get(args, 2), env.clone()),
+    }
 }
 
 fn eval_each(args: &Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
