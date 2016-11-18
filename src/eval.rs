@@ -1,4 +1,5 @@
-use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc, AFuncData};
+use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc, c_symbol,
+           AFuncData};
 use env::{c_env, env_set, env_get, Env};
 use std::fmt;
 
@@ -17,10 +18,10 @@ fn op_def(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 
     match *name {
         AtomType::Symbol(_) => {
-            let value = try!(eval(safe_get(args, 2), c_env(Some(env.clone()))));
+            let value = eval(safe_get(args, 2), env.clone())?;
 
             env_set(&env, &name, value);
-            Result::Ok(c_nil())
+            Result::Ok(c_symbol(name.to_string()))
         }
         ref v => {
             return Err(AtomError::InvalidType("Symbol as name of def".to_string(), v.format(true)));
@@ -33,10 +34,10 @@ fn op_lambda(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
-    let result = eval_ast(safe_get(args, 1), env.clone())?;
+    let result = eval(safe_get(args, 1), env.clone())?;
     match *result {
-        AtomType::Nil => eval_ast(safe_get(args, 3), env.clone()),
-        _ => eval_ast(safe_get(args, 2), env.clone()),
+        AtomType::Nil => eval(safe_get(args, 3), env.clone()),
+        _ => eval(safe_get(args, 2), env.clone()),
     }
 }
 
@@ -69,7 +70,7 @@ fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                 "def" => op_def(args, env),
                 "if" => op_if(args, env),
                 "print_env" => {
-                    println!("{:#?}", env);
+                    println!("{:?}", env);
                     Ok(c_nil())
                 }
                 "fn*" => op_lambda(args, env),

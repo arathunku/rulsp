@@ -163,10 +163,10 @@ mod tests {
     fn eval_simple_if() {
         let env = env();
 
-        assert_eq!(eval("(if nil 2 3)", env.clone()).unwrap(),
-                   c_int(3));
-        assert_eq!(eval("(if 1 2 3)", env.clone()).unwrap(),
+        assert_eq!(eval("(if nil (+ 2 2) (+ 1 1))", env.clone()).unwrap(),
                    c_int(2));
+        assert_eq!(eval("(if 1 (+ 2 2) (+ 1 1))", env.clone()).unwrap(),
+                   c_int(4));
     }
 
     #[test]

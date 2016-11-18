@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct EnvType {
     parent: Option<Env>,
     data: HashMap<String, AtomVal>,
@@ -24,6 +24,20 @@ impl fmt::Display for EnvType {
         str.sort();
 
         write!(f, "{{{}}}", str.join(" "))
+    }
+}
+
+impl fmt::Debug for EnvType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut str: Vec<String> = vec![];
+
+        for (ref key, ref value) in self.data.iter() {
+            str.push(format!("{} {}", key, value.format(true)));
+        }
+
+        str.sort();
+
+        write!(f, "Env {{ data: {{{}}} }}", str.join(" "))
     }
 }
 

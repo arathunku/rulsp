@@ -52,8 +52,12 @@ impl AtomType {
                 }
                 &AtomType::Nil => format!("Nil()"),
                 &AtomType::Symbol(ref symbol) => format!("Symbol({})", symbol),
-                &AtomType::Func(_) => format!("#func"),
-                &AtomType::AFunc(_) => format!("#builtin_func"),
+                &AtomType::Func(_) => format!("#func()"),
+                &AtomType::AFunc(ref data) => format!(
+                    "#builtin_func(exp={} params={})",
+                    data.exp,
+                    data.params.format(true)
+                ),
             }
         } else {
             match self {
@@ -76,8 +80,8 @@ impl AtomType {
                 }
                 &AtomType::Nil => format!("nil"),
                 &AtomType::Symbol(ref symbol) => format!("{}", symbol),
-                &AtomType::Func(_) => format!("#func"),
-                &AtomType::AFunc(_) => format!("#builtin_func"),
+                &AtomType::Func(_) => format!("#func()"),
+                &AtomType::AFunc(ref data) => format!("#builtin_func(exp={} params={})", data.exp, data.params),
             }
         }
     }
