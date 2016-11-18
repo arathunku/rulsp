@@ -68,10 +68,11 @@ pub fn env_find(env: &Env, key: &AtomVal) -> Option<Env> {
     }
 }
 
-pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) {
+pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) -> AtomRet {
     match **key {
         AtomType::Symbol(ref str) => {
             env.borrow_mut().data.insert(str.to_string(), value);
+            Ok(c_nil())
         }
         _ => unreachable!(),
     }
@@ -95,17 +96,11 @@ pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
     }
 }
 
-pub fn env_bind(env: &Env, params: AtomVal, args: Vec<AtomVal>) -> AtomRet {
-    match *params {
-        AtomType::List(ref variables) => {
-            for (index, variable) in variables.iter().enumerate() {
-                env_set(env, variable, args.get(0).unwrap_or(&c_nil()).clone())
-            }
-
-            Ok(c_nil())
-        }
-        _ => Err(AtomError::InvalidType("list".to_string(), params.format(true))),
+pub fn env_bind(env: &Env, params: &Vec<AtomVal>, args: &Vec<AtomVal>) -> AtomRet {
+    for (index, param) in params.iter().enumerate() {
+        env_set(env, param, args.get(0).unwrap_or(&c_nil()).clone())?;
     }
+    Ok(c_nil())
 }
 
 #[cfg(test)]

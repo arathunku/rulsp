@@ -50,9 +50,7 @@ fn eval_each(args: &Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
     Ok(evaled_args)
 }
 
-fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
-    println!("ast: {:?}", ast);
-
+pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
         AtomType::List(ref args) => {
             let opName = match args.get(0) {
@@ -69,10 +67,6 @@ fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                 "quote" => op_quote(args),
                 "def" => op_def(args, env),
                 "if" => op_if(args, env),
-                "print_env" => {
-                    println!("{:?}", env);
-                    Ok(c_nil())
-                }
                 "fn*" => op_lambda(args, env),
                 // Some function call with evaled arguments
                 _ => {

@@ -89,15 +89,33 @@ impl AtomType {
 
     pub fn apply(&self, args: Vec<AtomVal>) -> AtomRet {
         use eval::eval;
-        use env::{c_env, env_bind, Env};
+        use env::{c_env, env_bind, env_set, Env};
 
         match *self {
             AtomType::Func(f) => f(args),
             AtomType::AFunc(ref fd) => {
                 let fd = fd.clone();
                 let func_env = c_env(Some(fd.env.clone()));
+                match *fd.params {
+                    AtomType::List(ref params) => {
+                        let ampersand = c_symbol("&".to_string());
+                        env_bind(&func_env, params, &args)?;
 
-                env_bind(&func_env, fd.params, args)?;
+                        let args_count = params.clone().iter().take_while(|v| **v != ampersand).count();
+                        let rest = args.into_iter().skip(args_count).collect::<Vec<AtomVal>>();
+
+                        if args_count != params.iter().count() && params.get(args_count + 1).is_some() {
+                            if rest.len() > 0 {
+                                env_set(&func_env, params.get(args_count + 1).unwrap(), c_list(rest))?;
+                            } else {
+                                env_set(&func_env, params.get(args_count + 1).unwrap(), c_nil())?;
+
+                            }
+                        }
+
+                    },
+                    ref v => return Err(AtomError::InvalidType("list".to_string(), v.format(true)))
+                }
 
                 eval(fd.exp, func_env)
             },

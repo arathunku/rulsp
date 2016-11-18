@@ -60,10 +60,11 @@ fn car(args: Vec<AtomVal>) -> AtomRet {
 fn cdr(args: Vec<AtomVal>) -> AtomRet {
     match *safe_get(args.clone(), 0) {
         AtomType::List(ref seq) => {
-            if seq.len() == 2 {
-                Ok(safe_get(seq.clone(), 1))
+            let cdr = seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>();
+
+            if cdr.len() == 0 {
+                Ok(c_nil())
             } else {
-                let cdr = seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>();
                 Ok(c_list(cdr))
             }
         }
@@ -86,16 +87,29 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
+fn println(args: Vec<AtomVal>) -> AtomRet {
+    println!("{:?}", args);
+    Ok(c_nil())
+}
+
+fn print(args: Vec<AtomVal>) -> AtomRet {
+    println!("{:?}", args);
+    Ok(c_nil())
+}
+
 
 pub fn build() -> Env {
     let env = c_env(None);
 
+    env_set(&env, &c_symbol("print".to_string()), c_func(print));
+    env_set(&env, &c_symbol("println".to_string()), c_func(println));
     env_set(&env, &c_symbol("+".to_string()), c_func(add));
     env_set(&env, &c_symbol("-".to_string()), c_func(sub));
     env_set(&env, &c_symbol("*".to_string()), c_func(mul));
     env_set(&env, &c_symbol("/".to_string()), c_func(div));
     env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
     env_set(&env, &c_symbol("car".to_string()), c_func(car));
+    env_set(&env, &c_symbol("cdr".to_string()), c_func(cdr));
 
     // predicates
     env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));

@@ -27,7 +27,7 @@ fn eval(str: &str, env: Env) -> AtomRet {
             let parser = Parser::new(tokens);
             match parser.start() {
                 Ok(ast) => {
-                    print!("{} -> ast: {}", prefix, ast.format(true));
+                    // print!("{} -> ast: {}\n", prefix, ast.format(true));
 
                     match eval::eval(ast, env.clone()) {
                         Ok(result) => {
@@ -91,27 +91,6 @@ fn repl(env: Env) {
 
 fn main() {
     let env = core::build();
-    // c_list(vec![c_list(vec![c_int(1), c_symbol(String::from("ok"))]),
-    // c_list(vec![c_int(1), c_nil()])]);
-
-    // eval("(+ 2 3 (5 4 5 (+ 2 7) (+ 2 2) (+ 3 4)))", env.clone());
-    // eval("(()");
-    // eval("()");
-    // eval("))");
-    // eval("1");
-    // eval("(1 2)");
-    // eval("(test NIl)");
-    // eval("(test nil)");
-    // eval("(- 2 3)");
-    // eval("(+ 2 3)", env.clone());
-    // eval("(+ 0 (+ 2 2) (- 1 1) (* 2 2) (/ 2 2))");
-    // eval("foo", env.clone());
-    // eval("(quote foo)", env.clone());
-    // eval("(def foo 99)", env.clone());
-    // eval("foo", env.clone());
-    // eval("(def foo (quote bar))", env.clone());
-    // eval("foo", env.clone());
-
     repl(env);
 }
 
@@ -120,7 +99,7 @@ mod tests {
     use super::eval;
     use super::core;
     use ::env::{Env, env_get};
-    use ::data::{AtomRet, c_int, c_symbol};
+    use ::data::{AtomRet, c_int, c_symbol, c_list, c_nil};
 
     pub fn print(v: AtomRet) -> String {
         match v {
@@ -179,4 +158,22 @@ mod tests {
         assert_eq!(eval("(= 2 foo)", env.clone()).unwrap(),
                    c_int(1));
     }
+
+    #[test]
+    fn eval_variadic_func() {
+        assert_eq!(eval("((fn* (x & y) y) 1)", env()).unwrap(),
+                   c_nil());
+        assert_eq!(eval("((fn* (x & y) y) 1 2 3)", env()).unwrap(),
+                   c_list(vec![c_int(2), c_int(3)]));
+        assert_eq!(eval("((fn* (x & y) x) 2)", env()).unwrap(),
+                   c_int(2));
+
+        let env = env();
+        eval("(def sum-list (fn* (xs) (if xs (+ (car xs) (sum-list (cdr xs))) 0)))", env.clone());
+        eval("(def add (fn* (& xs) (sum-list xs)))", env.clone());
+
+        assert_eq!(eval("(add 3 4 5)", env.clone()).unwrap(),
+                   c_int(12));
+    }
+
 }
