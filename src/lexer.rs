@@ -47,6 +47,7 @@ pub enum Token {
     Identifier(String),
     Int(i64),
     Whitespace,
+    Apostrophe,
 }
 
 impl Token {
@@ -92,6 +93,7 @@ lazy_static! {
             ("oparen", Regex::new(r"^\(").unwrap()),
             ("cparen", Regex::new(r"^\)").unwrap()),
             ("integer", Regex::new(r"^[0-9]+").unwrap()),
+            ("apostrophe", Regex::new(r"^'").unwrap()),
             ("identifier", Regex::new(r"^([^\s\(\)\[\]\{\}]+)").unwrap()),
         ]
     };
@@ -121,6 +123,7 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
                     "cparen" => Token::Cparen,
                     "identifier" => Token::Identifier(token.to_string()),
                     "integer" => Token::Int(token.parse::<i64>().unwrap()),
+                    "apostrophe" => Token::Apostrophe,
                     _ => unreachable!(),
 
                 });

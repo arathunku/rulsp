@@ -60,6 +60,10 @@ impl Parser {
                             _ => Result::Ok((c_symbol(str.clone()), pos)),
                         }
                     }
+                    &Token::Apostrophe => {
+                        let (body, pos) = self.parse(pos + 1)?;
+                        Result::Ok((c_list(vec![c_symbol("quote".to_string()), body]), pos))
+                    }
                     _ => Result::Err(ParseError::Syntax),
                 }
             }
@@ -102,5 +106,22 @@ impl Parser {
         }
 
         Result::Ok((c_list(atoms), pos))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use data::{c_symbol, c_int, c_list};
+    use lexer::{Token, lex};
+    use super::Parser;
+
+    #[test]
+    fn test_apostrophe() {
+        let parser = Parser::new(&lex("'(1 2)").unwrap());
+
+        let expected = c_list(vec![c_symbol("quote".to_string()),
+                                   c_list(vec![c_int(1), c_int(2)])]);
+
+        assert_eq!(parser.start().unwrap(), expected);
     }
 }
