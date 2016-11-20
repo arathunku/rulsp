@@ -87,13 +87,20 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
+fn format_args(args: Vec<AtomVal>) -> String {
+    args.iter()
+        .map(|ref v| v.format(false))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn println(args: Vec<AtomVal>) -> AtomRet {
-    println!("{:?}", args);
+    println!("{}", format_args(args));
     Ok(c_nil())
 }
 
 fn print(args: Vec<AtomVal>) -> AtomRet {
-    println!("{:?}", args);
+    print!("{}", format_args(args));
     Ok(c_nil())
 }
 

@@ -31,12 +31,12 @@ fn eval(str: &str, env: Env) -> AtomRet {
 
                     match eval::eval(ast, env.clone()) {
                         Ok(result) => {
-                            println!(" -> {}", result);
+                            println!("=> {}", result);
                             // println!("{}", *(*env).borrow());
                             return Ok(result);
                         }
                         Err(err) => {
-                            println!(" -> {}", err);
+                            println!("=> {}", err);
                             return Err(err);
                         }
                     }

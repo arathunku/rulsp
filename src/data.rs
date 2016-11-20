@@ -13,6 +13,7 @@ pub enum AtomType {
     Vec(Vec<AtomVal>),
     Func(fn(Vec<AtomVal>) -> AtomRet),
     AFunc(AFuncData), // user defined function
+    Macro(AFuncData)
 }
 
 
@@ -58,6 +59,11 @@ impl AtomType {
                     data.exp,
                     data.params.format(true)
                 ),
+                &AtomType::Macro(ref data) => format!(
+                    "#macro(exp={} params={})",
+                    data.exp,
+                    data.params.format(true)
+                ),
             }
         } else {
             match self {
@@ -81,7 +87,8 @@ impl AtomType {
                 &AtomType::Nil => format!("nil"),
                 &AtomType::Symbol(ref symbol) => format!("{}", symbol),
                 &AtomType::Func(_) => format!("#func()"),
-                &AtomType::AFunc(ref data) => format!("#builtin_func(exp={} params={})", data.exp, data.params),
+                &AtomType::AFunc(ref data) => format!("#builtin_func()"),
+                &AtomType::Macro(ref data) => format!("#macro()")
             }
         }
     }
