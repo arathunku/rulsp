@@ -13,7 +13,6 @@ pub enum AtomType {
     Vec(Vec<AtomVal>),
     Func(fn(Vec<AtomVal>) -> AtomRet),
     AFunc(AFuncData), // user defined function
-    Macro(AFuncData)
 }
 
 
@@ -22,6 +21,7 @@ pub struct AFuncData {
     pub exp: AtomVal,
     pub env: Env,
     pub params: AtomVal,
+    pub is_macro: bool
 }
 
 impl Display for AtomType {
@@ -54,16 +54,18 @@ impl AtomType {
                 &AtomType::Nil => format!("Nil()"),
                 &AtomType::Symbol(ref symbol) => format!("Symbol({})", symbol),
                 &AtomType::Func(_) => format!("#func()"),
-                &AtomType::AFunc(ref data) => format!(
-                    "#builtin_func(exp={} params={})",
-                    data.exp,
-                    data.params.format(true)
-                ),
-                &AtomType::Macro(ref data) => format!(
-                    "#macro(exp={} params={})",
-                    data.exp,
-                    data.params.format(true)
-                ),
+                &AtomType::AFunc(ref data) => {
+                    let _type = if data.is_macro {
+                        "macro"
+                    } else {
+                        "builtin_func"
+                    };
+
+                    format!("#{}(exp={} params={})",
+                            _type,
+                            data.exp,
+                            data.params.format(true))
+                }
             }
         } else {
             match self {
@@ -87,8 +89,13 @@ impl AtomType {
                 &AtomType::Nil => format!("nil"),
                 &AtomType::Symbol(ref symbol) => format!("{}", symbol),
                 &AtomType::Func(_) => format!("#func()"),
-                &AtomType::AFunc(ref data) => format!("#builtin_func()"),
-                &AtomType::Macro(ref data) => format!("#macro()")
+                &AtomType::AFunc(ref data) => {
+                    if data.is_macro {
+                        format!("#macro()")
+                    } else {
+                        format!("#builtin_func()")
+                    }
+                },
             }
         }
     }
@@ -98,6 +105,7 @@ impl AtomType {
         use eval::eval;
         use env::{c_env, env_bind, env_set, Env};
 
+        println!("Apply: {:?} {:?}", self, args);
         match *self {
             AtomType::Func(f) => f(args),
             AtomType::AFunc(ref fd) => {
@@ -132,7 +140,7 @@ impl AtomType {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AtomError {
     // expected, received
     InvalidType(String, String),
@@ -191,8 +199,16 @@ pub fn c_vec(seq: Vec<AtomVal>) -> AtomVal {
 }
 
 pub fn c_afunc(env: Env, params: AtomVal, exp: AtomVal) -> AtomVal {
-    Rc::new(AtomType::AFunc(AFuncData { exp, env, params }))
+    Rc::new(AtomType::AFunc(AFuncData { exp, env, params, is_macro: false }))
 }
+
+pub fn c_macro(fd: &AFuncData) -> AtomVal {
+    let mut fd = (*fd).clone();
+    fd.is_macro = true;
+
+    Rc::new(AtomType::AFunc(fd))
+}
+
 
 #[cfg(test)]
 mod tests {

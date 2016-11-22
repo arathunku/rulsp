@@ -99,7 +99,7 @@ mod tests {
     use super::eval;
     use super::core;
     use ::env::{Env, env_get};
-    use ::data::{AtomRet, c_int, c_symbol, c_list, c_nil};
+    use ::data::{AtomRet, AtomError, c_int, c_symbol, c_list, c_nil};
 
     pub fn print(v: AtomRet) -> String {
         match v {
@@ -174,5 +174,16 @@ mod tests {
 
         assert_eq!(eval("(add 3 4 5)", env.clone()).unwrap(),
                    c_int(12));
+    }
+
+    #[test]
+    fn eval_macro() {
+        let env = env();
+        eval("(defmacro ignore (fn* (x) (cons 'quote x))))", env.clone());
+
+        assert_eq!(eval("(ignore foo)", env.clone()).expect("This shouldn't fail because foo is ignored"),
+                   c_symbol("foo".to_string()));
+
+        assert_eq!(eval("foo", env.clone()).unwrap_err(), AtomError::UndefinedSymbol("foo".to_string()));
     }
 }

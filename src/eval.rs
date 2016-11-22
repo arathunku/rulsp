@@ -1,5 +1,5 @@
 use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc, c_symbol,
-           AFuncData};
+           c_macro, AFuncData};
 use env::{c_env, env_set, env_get, Env};
 use std::fmt;
 
@@ -33,21 +33,59 @@ fn op_lambda(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     Ok(c_afunc(env, safe_get(args, 1), safe_get(args, 2)))
 }
 
+fn op_macro(args: &Vec<AtomVal>, env: Env) -> AtomRet {
+    let result = eval(safe_get(args, 2), env.clone())?;
+    match *result {
+        AtomType::AFunc(ref fd) => {
+            op_def(&vec![c_nil(), safe_get(args, 1), c_macro(&fd)], env.clone())
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn is_macro_call(ast: AtomVal, env: Env) -> bool {
+    match *ast {
+        AtomType::List(ref args) => {
+            if let Some(value) = env_get(&env, &args[0]) {
+                match *value {
+                    AtomType::AFunc(ref fd) => fd.is_macro,
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+fn op_macroexpand(mut ast: AtomVal, env: Env) -> AtomRet {
+    println!("IS MACRO CALL: {:?}", ast);
+    while is_macro_call(ast.clone(), env.clone()) {
+        let new_ast = ast.clone();
+
+        let args = match *new_ast {
+            AtomType::List(ref args) => args,
+            _ => break,
+        };
+
+        if let Some(f) = env_get(&env, &args[0]) {
+            ast = f.apply(args[1..].to_vec())?;
+        } else {
+            break;
+        }
+    }
+
+    println!("EXPANDED AST: {:?}", ast);
+    Ok(ast)
+}
+
 fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     let result = eval(safe_get(args, 1), env.clone())?;
     match *result {
         AtomType::Nil => eval(safe_get(args, 3), env.clone()),
         _ => eval(safe_get(args, 2), env.clone()),
     }
-}
-
-fn eval_each(args: &Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
-    let mut evaled_args = vec![];
-    for arg in args {
-        evaled_args.push(eval(arg.clone(), env.clone())?);
-    }
-
-    Ok(evaled_args)
 }
 
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
@@ -65,9 +103,15 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
 
             match opName {
                 "quote" => op_quote(args),
+                "p_env" => {
+                    println!("{:?}", env);
+                    Ok(c_nil())
+                }
                 "def" => op_def(args, env),
                 "if" => op_if(args, env),
                 "fn*" => op_lambda(args, env),
+                "defmacro" => op_macro(args, env),
+                "macroexpand" => op_macroexpand(safe_get(args, 1), env.clone()),
                 // Some function call with evaled arguments
                 _ => {
                     let evaled_args = eval_ast(ast.clone(), env)?;
@@ -88,9 +132,14 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
 
 fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(ref seq) => {
-            let args = eval_each(seq, env)?;
-            Ok(c_list(args))
+        AtomType::List(ref args) => {
+            let mut evaled_args = vec![];
+
+            for arg in args {
+                evaled_args.push(eval(arg.clone(), env.clone())?);
+            }
+
+            Ok(c_list(evaled_args))
         }
         AtomType::Symbol(ref name) => {
             if let Some(atom) = env_get(&env, &ast) {
@@ -105,11 +154,16 @@ fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
 
 pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(_) => eval_exp(ast, env),
+        AtomType::List(_) => {
+            let ast = op_macroexpand(ast, env.clone())?;
+            match *ast {
+                AtomType::List(_) => eval_exp(ast, env),
+                _ => eval_ast(ast, env),
+            }
+        }
         _ => eval_ast(ast, env),
     }
 }
-
 
 
 #[cfg(test)]

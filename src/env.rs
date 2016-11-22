@@ -64,7 +64,7 @@ pub fn env_find(env: &Env, key: &AtomVal) -> Option<Env> {
                 }
             }
         }
-        _ => unreachable!(),
+        _ => None,
     }
 }
 
@@ -90,7 +90,7 @@ pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
                         None => None,
                     }
                 }
-                _ => unreachable!(),
+                _ => None,
             }
         }
     }

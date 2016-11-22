@@ -77,7 +77,7 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
     for (i, arg) in args.iter().enumerate() {
         let next_arg = args.get(i + 1);
         if next_arg.is_some() {
-            if (next_arg.unwrap() != arg) {
+            if next_arg.unwrap() != arg {
                 output = c_nil();
             };
         }
@@ -87,20 +87,30 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
-fn format_args(args: Vec<AtomVal>) -> String {
+fn format_args(args: Vec<AtomVal>, format: bool) -> String {
     args.iter()
-        .map(|ref v| v.format(false))
+        .map(|ref v| v.format(format))
         .collect::<Vec<_>>()
         .join(" ")
 }
 
 fn println(args: Vec<AtomVal>) -> AtomRet {
-    println!("{}", format_args(args));
+    println!("{}", format_args(args, false));
     Ok(c_nil())
 }
 
 fn print(args: Vec<AtomVal>) -> AtomRet {
-    print!("{}", format_args(args));
+    print!("{}", format_args(args, false));
+    Ok(c_nil())
+}
+
+fn _println(args: Vec<AtomVal>) -> AtomRet {
+    println!("{}", format_args(args, true));
+    Ok(c_nil())
+}
+
+fn _print(args: Vec<AtomVal>) -> AtomRet {
+    print!("{}", format_args(args, true));
     Ok(c_nil())
 }
 
@@ -110,6 +120,8 @@ pub fn build() -> Env {
 
     env_set(&env, &c_symbol("print".to_string()), c_func(print));
     env_set(&env, &c_symbol("println".to_string()), c_func(println));
+    env_set(&env, &c_symbol("_print".to_string()), c_func(_print));
+    env_set(&env, &c_symbol("_println".to_string()), c_func(_println));
     env_set(&env, &c_symbol("+".to_string()), c_func(add));
     env_set(&env, &c_symbol("-".to_string()), c_func(sub));
     env_set(&env, &c_symbol("*".to_string()), c_func(mul));
