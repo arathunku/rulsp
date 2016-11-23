@@ -47,25 +47,46 @@ fn div(args: Vec<AtomVal>) -> AtomRet {
 }
 
 fn cons(args: Vec<AtomVal>) -> AtomRet {
-    Ok(c_list(args))
-}
-
-fn car(args: Vec<AtomVal>) -> AtomRet {
-    match *safe_get(args.clone(), 0) {
-        AtomType::List(ref seq) => Ok(safe_get(seq.clone(), 0)),
-        _ => Ok(c_nil()),
+    match *safe_get(args.clone(), 1) {
+        AtomType::List(ref seq) => {
+            let mut list = seq.clone();
+            list.insert(0, safe_get(args.clone(), 0));
+            Ok(c_list(list))
+        }
+        ref v => Err(AtomError::InvalidType("List".to_string(), v.format(true))),
     }
 }
 
-fn cdr(args: Vec<AtomVal>) -> AtomRet {
+fn list(args: Vec<AtomVal>) -> AtomRet {
+    Ok(c_list(args))
+}
+
+fn count(args: Vec<AtomVal>) -> AtomRet {
+    match *safe_get(args.clone(), 0) {
+        AtomType::List(ref seq) => Ok(c_int(seq.len() as i64)),
+        ref v => Err(AtomError::InvalidType("List".to_string(), v.format(true))),
+    }
+}
+
+
+fn nth(args: Vec<AtomVal>) -> AtomRet {
+    let ref list = *safe_get(args.clone(), 0);
+    let ref el = *safe_get(args.clone(), 1);
+
+    match (list, el) {
+        (&AtomType::List(ref seq), &AtomType::Int(ref n)) => Ok(safe_get(seq.clone(), *n as usize)),
+        (_, _) => Ok(c_nil()),
+    }
+}
+
+
+fn rest(args: Vec<AtomVal>) -> AtomRet {
     match *safe_get(args.clone(), 0) {
         AtomType::List(ref seq) => {
-            let cdr = seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>();
-
-            if cdr.len() == 0 {
-                Ok(c_nil())
+            if seq.len() > 0 {
+                Ok(c_list(seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>()))
             } else {
-                Ok(c_list(cdr))
+                Ok(c_list(vec![]))
             }
         }
         _ => Ok(c_nil()),
@@ -127,8 +148,10 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("*".to_string()), c_func(mul));
     env_set(&env, &c_symbol("/".to_string()), c_func(div));
     env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
-    env_set(&env, &c_symbol("car".to_string()), c_func(car));
-    env_set(&env, &c_symbol("cdr".to_string()), c_func(cdr));
+    env_set(&env, &c_symbol("list".to_string()), c_func(list));
+    env_set(&env, &c_symbol("nth".to_string()), c_func(nth));
+    env_set(&env, &c_symbol("rest".to_string()), c_func(rest));
+    env_set(&env, &c_symbol("count".to_string()), c_func(count));
 
     // predicates
     env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));

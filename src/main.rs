@@ -169,7 +169,7 @@ mod tests {
                    c_int(2));
 
         let env = env();
-        eval("(def sum-list (fn* (xs) (if xs (+ (car xs) (sum-list (cdr xs))) 0)))", env.clone());
+        eval("(def sum-list (fn* (xs) (if (= 0 (count xs)) 0 (+ (nth xs 0) (sum-list (rest xs))))))", env.clone());
         eval("(def add (fn* (& xs) (sum-list xs)))", env.clone());
 
         assert_eq!(eval("(add 3 4 5)", env.clone()).unwrap(),
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn eval_macro() {
         let env = env();
-        eval("(defmacro ignore (fn* (x) (cons 'quote x))))", env.clone());
+        eval("(defmacro ignore (fn* (x) (list 'quote x))))", env.clone());
 
         assert_eq!(eval("(ignore foo)", env.clone()).expect("This shouldn't fail because foo is ignored"),
                    c_symbol("foo".to_string()));
