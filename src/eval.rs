@@ -111,7 +111,16 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                 "if" => op_if(args, env),
                 "fn*" => op_lambda(args, env),
                 "defmacro" => op_macro(args, env),
-                "macroexpand" => op_macroexpand(safe_get(args, 1), env.clone()),
+                "do" => {
+                    let evaled_args = eval_ast(c_list(args[1..].to_vec()), env)?;
+                    match *evaled_args {
+                        AtomType::List(ref args) => Ok(args.last().unwrap_or(&c_nil()).clone()),
+                        _ => Ok(c_nil()),
+                    }
+                }
+                "macroexpand" => {
+                    op_macroexpand(eval_exp(safe_get(args, 1), env.clone())?, env.clone())
+                }
                 // Some function call with evaled arguments
                 _ => {
                     let evaled_args = eval_ast(ast.clone(), env)?;
@@ -154,13 +163,7 @@ fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
 
 pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(_) => {
-            let ast = op_macroexpand(ast, env.clone())?;
-            match *ast {
-                AtomType::List(_) => eval_exp(ast, env),
-                _ => eval_ast(ast, env),
-            }
-        }
+        AtomType::List(_) => eval_exp(ast, env),
         _ => eval_ast(ast, env),
     }
 }
