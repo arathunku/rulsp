@@ -163,7 +163,13 @@ fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
 
 pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(_) => eval_exp(ast, env),
+        AtomType::List(_) => {
+            let ast = op_macroexpand(ast, env.clone())?;
+            match *ast {
+                AtomType::List(_) => eval_exp(ast, env),
+                _ => eval_ast(ast, env),
+            }
+        }
         _ => eval_ast(ast, env),
     }
 }
