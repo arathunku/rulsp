@@ -98,7 +98,7 @@ pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
 
 pub fn env_bind(env: &Env, params: &Vec<AtomVal>, args: &Vec<AtomVal>) -> AtomRet {
     for (index, param) in params.iter().enumerate() {
-        env_set(env, param, args.get(0).unwrap_or(&c_nil()).clone())?;
+        env_set(env, param, args.get(index).unwrap_or(&c_nil()).clone())?;
     }
     Ok(c_nil())
 }

@@ -1,5 +1,11 @@
+use std::fs::File;
+use std::io::prelude::*;
+
 use env::{c_env, env_set, env_get, Env};
 use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_symbol, c_func, c_vec};
+use eval::eval_str;
+use parser::Parser;
+
 
 fn safe_get(args: Vec<AtomVal>, index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
@@ -61,6 +67,21 @@ fn list(args: Vec<AtomVal>) -> AtomRet {
     Ok(c_list(args))
 }
 
+fn is_list(args: Vec<AtomVal>) -> AtomRet {
+    match *safe_get(args.clone(), 0) {
+        AtomType::List(_) => Ok(c_int(1)),
+        _ => Ok(c_nil()),
+    }
+}
+
+fn is_nil(args: Vec<AtomVal>) -> AtomRet {
+    match *safe_get(args.clone(), 0) {
+        AtomType::Nil => Ok(c_int(1)),
+        _ => Ok(c_nil()),
+    }
+}
+
+
 fn count(args: Vec<AtomVal>) -> AtomRet {
     match *safe_get(args.clone(), 0) {
         AtomType::List(ref seq) => Ok(c_int(seq.len() as i64)),
@@ -108,7 +129,7 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
-fn format_args(args: Vec<AtomVal>, format: bool) -> String {
+fn format_args(args: &Vec<AtomVal>, format: bool) -> String {
     args.iter()
         .map(|ref v| v.format(format))
         .collect::<Vec<_>>()
@@ -116,23 +137,23 @@ fn format_args(args: Vec<AtomVal>, format: bool) -> String {
 }
 
 fn println(args: Vec<AtomVal>) -> AtomRet {
-    println!("{}", format_args(args, false));
-    Ok(c_nil())
+    println!("{}", format_args(&args, false));
+    Ok(safe_get(args, 0))
 }
 
 fn print(args: Vec<AtomVal>) -> AtomRet {
-    print!("{}", format_args(args, false));
-    Ok(c_nil())
+    print!("{}", format_args(&args, false));
+    Ok(safe_get(args, 0))
 }
 
 fn _println(args: Vec<AtomVal>) -> AtomRet {
-    println!("{}", format_args(args, true));
-    Ok(c_nil())
+    println!("{}", format_args(&args, true));
+    Ok(safe_get(args, 0))
 }
 
 fn _print(args: Vec<AtomVal>) -> AtomRet {
-    print!("{}", format_args(args, true));
-    Ok(c_nil())
+    print!("{}", format_args(&args, true));
+    Ok(safe_get(args, 0))
 }
 
 
@@ -149,6 +170,8 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("/".to_string()), c_func(div));
     env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
     env_set(&env, &c_symbol("list".to_string()), c_func(list));
+    env_set(&env, &c_symbol("list?".to_string()), c_func(is_list));
+    env_set(&env, &c_symbol("nil?".to_string()), c_func(is_nil));
     env_set(&env, &c_symbol("nth".to_string()), c_func(nth));
     env_set(&env, &c_symbol("rest".to_string()), c_func(rest));
     env_set(&env, &c_symbol("count".to_string()), c_func(count));
@@ -156,6 +179,13 @@ pub fn build() -> Env {
     // predicates
     env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
     // env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
+
+
+    let mut f = File::open("src/core.clrs").expect("core.clrs has to be openable");
+    let mut s = String::new();
+    f.read_to_string(&mut s).expect("Couldn't read core.clrs");
+
+    eval_str(s.as_str(), env.clone()).expect("Problem loading core.clrs into ENV");
 
     env
 }

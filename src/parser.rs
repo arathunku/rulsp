@@ -64,6 +64,19 @@ impl Parser {
                         let (body, pos) = self.parse(pos + 1)?;
                         Result::Ok((c_list(vec![c_symbol("quote".to_string()), body]), pos))
                     }
+                    &Token::Unquote => {
+                        let (body, pos) = self.parse(pos + 1)?;
+                        Result::Ok((c_list(vec![c_symbol("unquote".to_string()), body]), pos))
+                    }
+                    &Token::Backquote => {
+                        let (body, pos) = self.parse(pos + 1)?;
+                        Result::Ok((c_list(vec![c_symbol("backquote".to_string()), body]), pos))
+                    }
+                    &Token::UnquoteSplicing => {
+                        let (body, pos) = self.parse(pos + 1)?;
+                        Result::Ok((c_list(vec![c_symbol("unquote-splicing".to_string()), body]),
+                                    pos))
+                    }
                     _ => Result::Err(ParseError::Syntax),
                 }
             }
@@ -120,6 +133,36 @@ mod tests {
         let parser = Parser::new(&lex("'(1 2)").unwrap());
 
         let expected = c_list(vec![c_symbol("quote".to_string()),
+                                   c_list(vec![c_int(1), c_int(2)])]);
+
+        assert_eq!(parser.start().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_unquote() {
+        let parser = Parser::new(&lex("~(1 2)").unwrap());
+
+        let expected = c_list(vec![c_symbol("unquote".to_string()),
+                                   c_list(vec![c_int(1), c_int(2)])]);
+
+        assert_eq!(parser.start().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_backquote() {
+        let parser = Parser::new(&lex("`(1 2)").unwrap());
+
+        let expected = c_list(vec![c_symbol("backquote".to_string()),
+                                   c_list(vec![c_int(1), c_int(2)])]);
+
+        assert_eq!(parser.start().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_unquote_splicing() {
+        let parser = Parser::new(&lex("~@(1 2)").unwrap());
+
+        let expected = c_list(vec![c_symbol("unquote-splicing".to_string()),
                                    c_list(vec![c_int(1), c_int(2)])]);
 
         assert_eq!(parser.start().unwrap(), expected);

@@ -2,6 +2,8 @@ use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc,
            c_macro, AFuncData};
 use env::{c_env, env_set, env_get, Env};
 use std::fmt;
+use lexer::{lex, format_tokens};
+use parser::Parser;
 
 fn safe_get(args: &Vec<AtomVal>, index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
@@ -20,7 +22,7 @@ fn op_def(args: &Vec<AtomVal>, env: Env) -> AtomRet {
         AtomType::Symbol(_) => {
             let value = eval(safe_get(args, 2), env.clone())?;
 
-            env_set(&env, &name, value);
+            let _ = env_set(&env, &name, value);
             Result::Ok(c_symbol(name.to_string()))
         }
         ref v => {
@@ -60,7 +62,7 @@ fn is_macro_call(ast: AtomVal, env: Env) -> bool {
 }
 
 fn op_macroexpand(mut ast: AtomVal, env: Env) -> AtomRet {
-    println!("IS MACRO CALL: {:?}", ast);
+    // println!("IS MACRO CALL: {:?}", ast);
     while is_macro_call(ast.clone(), env.clone()) {
         let new_ast = ast.clone();
 
@@ -76,7 +78,7 @@ fn op_macroexpand(mut ast: AtomVal, env: Env) -> AtomRet {
         }
     }
 
-    println!("EXPANDED AST: {:?}", ast);
+    // println!("EXPANDED AST: {:?}", ast);
     Ok(ast)
 }
 
@@ -88,10 +90,49 @@ fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     }
 }
 
+// fn op_backquote(args: &Vec<AtomVal>, env: Env) -> AtomRet {
+//     match *safe_get(args, 1) {
+//         AtomType::List(ref args) => {
+//             let mut new_list: Vec<AtomVal> = vec![];
+
+//             for arg in args.iter() {
+//                 match arg {
+//                     AtomType::List(ref nested) => {
+//                         match *safe_get(nested, 0) {
+//                             AtomType::Symbol(s) => {
+//                                 if s == "unquote-splicing" {
+//                                     // connect as list
+//                                     new_list.push(eval_ast(safe_get(nested, 1)));
+//                                 } else if s == "unquote" {
+//                                     new_list.push(eval_ast(safe_get(nested, 1)));
+
+//                                 }
+//                             },
+//                             _ => {new_list.push(c_nil());}
+//                         }
+//                     },
+
+//                     _ => {new_list.push(arg.clone(););
+//                 }
+//             }
+//             // if let Some(value) = env_get(&env, &args[0]) {
+//             // match *value {
+//             // AtomType::AFunc(ref fd) => fd.is_macro,
+//             // _ => false,
+//             // }
+//             // } else {
+//             // false
+//             // }
+//             Ok(c_list(new_list))
+//         }
+//         _ => op_quote(args),
+//     }
+// }
+
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
         AtomType::List(ref args) => {
-            let opName = match args.get(0) {
+            let op_name = match args.get(0) {
                 None => return Ok(ast.clone()),
                 Some(op) => {
                     match **op {
@@ -101,8 +142,11 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                 }
             };
 
-            match opName {
+            match op_name {
                 "quote" => op_quote(args),
+                // "unquote" => op_unquote(args),
+                // "backquote" => op_backquote(args, env),
+                // "quote-splicing" => op_quote_splicing(args),
                 "p_env" => {
                     println!("{:?}", env);
                     Ok(c_nil())
@@ -111,6 +155,7 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                 "if" => op_if(args, env),
                 "fn*" => op_lambda(args, env),
                 "defmacro" => op_macro(args, env),
+                "eval" => eval(eval(safe_get(args, 1), env.clone())?, env),
                 "do" => {
                     let evaled_args = eval_ast(c_list(args[1..].to_vec()), env)?;
                     match *evaled_args {
@@ -126,7 +171,7 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
                     let evaled_args = eval_ast(ast.clone(), env)?;
                     let args = match *evaled_args {
                         AtomType::List(ref args) => args,
-                        _ => return Err(AtomError::InvalidOperation(opName.to_string())),
+                        _ => return Err(AtomError::InvalidOperation(op_name.to_string())),
                     };
 
                     let subject_func = &args[0].clone();
@@ -173,6 +218,45 @@ pub fn eval(ast: AtomVal, env: Env) -> AtomRet {
         _ => eval_ast(ast, env),
     }
 }
+
+pub fn eval_str(str: &str, env: Env) -> AtomRet {
+    let tokens = lex(str);
+    match tokens {
+        Ok(ref tokens) => {
+            let prefix = format!("exp: {} -> lex: {}", str, format_tokens(tokens));
+            let parser = Parser::new(tokens);
+            match parser.start() {
+                Ok(ast) => {
+                    // print!("{} -> ast: {}\n", prefix, ast.format(true));
+
+                    match eval(ast, env.clone()) {
+                        Ok(result) => {
+                            println!("=> {}", result);
+                            // println!("{}", *(*env).borrow());
+                            return Ok(result);
+                        }
+                        Err(err) => {
+                            println!("=> {}", err);
+                            return Err(err);
+                        }
+                    }
+
+                }
+                Err(err) => {
+                    println!("{} -> ast: {}", prefix, err);
+                    // FIXME: should return correct err;
+                    return Ok(c_nil());
+                }
+            }
+        }
+        Err(err) => {
+            println!("lex: {} {}", str, err);
+            // FIXME: should return correct err;
+            return Ok(c_nil());
+        }
+    }
+}
+
 
 
 #[cfg(test)]

@@ -105,7 +105,6 @@ impl AtomType {
         use eval::eval;
         use env::{c_env, env_bind, env_set, Env};
 
-        println!("Apply: {:?} {:?}", self, args);
         match *self {
             AtomType::Func(f) => f(args),
             AtomType::AFunc(ref fd) => {
@@ -114,6 +113,7 @@ impl AtomType {
                 match *fd.params {
                     AtomType::List(ref params) => {
                         let ampersand = c_symbol("&".to_string());
+                        // println!("params={:?} args={:?}", params, args);
                         env_bind(&func_env, params, &args)?;
 
                         let args_count = params.clone().iter().take_while(|v| **v != ampersand).count();
@@ -132,6 +132,7 @@ impl AtomType {
                     ref v => return Err(AtomError::InvalidType("list".to_string(), v.format(true)))
                 }
 
+                // println!("ENV FUNC: {:?}", func_env);
                 eval(fd.exp, func_env)
             },
             _ => Err(AtomError::InvalidType("function".to_string(), self.format(true)))

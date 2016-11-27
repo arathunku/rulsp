@@ -48,6 +48,9 @@ pub enum Token {
     Int(i64),
     Whitespace,
     Apostrophe,
+    Backquote,
+    Unquote,
+    UnquoteSplicing,
 }
 
 impl Token {
@@ -92,8 +95,13 @@ lazy_static! {
             ("whitespace", Regex::new(r"^\s+").unwrap()),
             ("oparen", Regex::new(r"^\(").unwrap()),
             ("cparen", Regex::new(r"^\)").unwrap()),
+            ("obracket", Regex::new(r"^\[").unwrap()),
+            ("cbracket", Regex::new(r"^\]").unwrap()),
             ("integer", Regex::new(r"^[0-9]+").unwrap()),
             ("apostrophe", Regex::new(r"^'").unwrap()),
+            ("backquote", Regex::new(r"^`").unwrap()),
+            ("unquote_splicing", Regex::new(r"^~@").unwrap()),
+            ("unquote", Regex::new(r"^~").unwrap()),
             ("identifier", Regex::new(r"^([^\s\(\)\[\]\{\}]+)").unwrap()),
         ]
     };
@@ -121,9 +129,14 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
                     "whitespace" => Token::Whitespace,
                     "oparen" => Token::Oparen,
                     "cparen" => Token::Cparen,
+                    "obracket" => Token::Oparen,
+                    "cbrakcet" => Token::Cparen,
                     "identifier" => Token::Identifier(token.to_string()),
                     "integer" => Token::Int(token.parse::<i64>().unwrap()),
                     "apostrophe" => Token::Apostrophe,
+                    "backquote" => Token::Backquote,
+                    "unquote" => Token::Unquote,
+                    "unquote_splicing" => Token::UnquoteSplicing,
                     _ => unreachable!(),
 
                 });

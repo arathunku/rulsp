@@ -1,0 +1,43 @@
+(do
+  (def first (fn* (coll) (nth coll 0)))
+  (def second (fn* (coll) (nth coll 1)))
+  (def inc (fn* (v) (+ v 1)))
+  (def empty? (fn* (coll)
+                   (if (nil? coll) 1 (= (count coll) 0))))
+  (def not (fn* (v) (if v nil 1)))
+  (def map
+    (fn* (f coll)
+         (if (empty? coll)
+           '()
+           (cons (f (first coll)) (map f (rest coll))))))
+  (def reduce
+    (fn* (f val coll)
+         (if (empty? coll)
+           val
+           (reduce f (f (first coll) val) (rest coll)))))
+  (def concat
+    (fn* (a b)
+         (if (empty? a)
+           (if (nil? b) '() b)
+           (cons (first a) (concat (rest a) b)))))
+
+  (defmacro backquote
+    (fn* (args)
+         (do
+           (if (list? args)
+             (if (not (empty? args))
+               (do
+                 (if (= 'unquote (first args))
+                   (second args)
+                   (if (= 'unquote-splicing (first (first args)))
+                     (list 'concat (second (first args)) (list 'backquote (rest (rest args))))
+                     (list 'cons (list 'backquote (first args)) (list 'backquote (rest args))))))
+               (list 'quote '()))
+             (list 'quote args)))))
+  (defmacro let
+    (fn* (defs & body)
+         `((fn* ~(map first defs) ~@body)
+           ~@(map second defs))))
+
+  (def + (let ((core+ +)) (fn* (& xs) (reduce core+ 0 xs))))
+)
