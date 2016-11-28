@@ -172,4 +172,15 @@ mod tests {
 
         assert_eq!(eval_str("(eval `(+ ~@(list 1 2 3)))", env.clone()).unwrap(), c_int(6));
     }
+
+
+
+
+
+    #[test]
+    fn eval_loop_recur() {
+        let env = env();
+
+        assert_eq!(eval_str("(loop (x 2 acc 0) (if (= x 1) acc (recur (- x 1) (+ acc x))))", env.clone()).unwrap(), c_int(2));
+    }
 }
