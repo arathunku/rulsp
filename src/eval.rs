@@ -90,45 +90,6 @@ fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     }
 }
 
-// fn op_backquote(args: &Vec<AtomVal>, env: Env) -> AtomRet {
-//     match *safe_get(args, 1) {
-//         AtomType::List(ref args) => {
-//             let mut new_list: Vec<AtomVal> = vec![];
-
-//             for arg in args.iter() {
-//                 match arg {
-//                     AtomType::List(ref nested) => {
-//                         match *safe_get(nested, 0) {
-//                             AtomType::Symbol(s) => {
-//                                 if s == "unquote-splicing" {
-//                                     // connect as list
-//                                     new_list.push(eval_ast(safe_get(nested, 1)));
-//                                 } else if s == "unquote" {
-//                                     new_list.push(eval_ast(safe_get(nested, 1)));
-
-//                                 }
-//                             },
-//                             _ => {new_list.push(c_nil());}
-//                         }
-//                     },
-
-//                     _ => {new_list.push(arg.clone(););
-//                 }
-//             }
-//             // if let Some(value) = env_get(&env, &args[0]) {
-//             // match *value {
-//             // AtomType::AFunc(ref fd) => fd.is_macro,
-//             // _ => false,
-//             // }
-//             // } else {
-//             // false
-//             // }
-//             Ok(c_list(new_list))
-//         }
-//         _ => op_quote(args),
-//     }
-// }
-
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
         AtomType::List(ref args) => {
@@ -144,9 +105,6 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
 
             match op_name {
                 "quote" => op_quote(args),
-                // "unquote" => op_unquote(args),
-                // "backquote" => op_backquote(args, env),
-                // "quote-splicing" => op_quote_splicing(args),
                 "p_env" => {
                     println!("{:?}", env);
                     Ok(c_nil())
