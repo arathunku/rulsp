@@ -33,7 +33,6 @@ use data::{c_nil, AtomRet};
 use env::{Env};
 use eval::eval_str;
 
-
 fn repl(env: Env) {
     let mut rl = Editor::<()>::new();
     if let Err(_) = rl.load_history("history.txt") {
@@ -67,6 +66,12 @@ fn repl(env: Env) {
 fn main() {
     let env = core::build();
     repl(env);
+    // let count = format!("
+      // (do
+        // (def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))
+        // (count-1 {}))
+    // ", std::env::args().nth(1).unwrap_or("5".to_string()));
+    // eval_str(count.as_str(), env.clone());
 }
 
 #[cfg(test)]
