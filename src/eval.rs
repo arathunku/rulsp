@@ -239,8 +239,6 @@ pub fn eval_str(str: &str, env: Env) -> AtomRet {
 
                     match eval(ast, env.clone()) {
                         Ok(result) => {
-                            println!("=> {}", result);
-                            // println!("{}", *(*env).borrow());
                             return Ok(result);
                         }
                         Err(err) => {

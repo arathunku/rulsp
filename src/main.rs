@@ -1,4 +1,7 @@
 #![feature(field_init_shorthand)]
+#![feature(test)]
+
+extern crate test;
 
 extern crate regex;
 #[macro_use]
@@ -44,7 +47,11 @@ fn repl(env: Env) {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                let _ = eval_str(line.as_str(), env.clone());
+                let result = eval_str(line.as_str(), env.clone());
+                match result {
+                    Ok(result) => println!(">> {}", result),
+                    Err(err) => println!(">> {:?}", err)
+                };
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
@@ -66,11 +73,13 @@ fn repl(env: Env) {
 fn main() {
     let env = core::build();
     repl(env);
+
     // let count = format!("
-      // (do
-        // (def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))
-        // (count-1 {}))
+    //   (do
+    //     (def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))
+    //     (count-1 {}))
     // ", std::env::args().nth(1).unwrap_or("5".to_string()));
+
     // eval_str(count.as_str(), env.clone());
 }
 
@@ -179,13 +188,24 @@ mod tests {
     }
 
 
-
-
-
     #[test]
     fn eval_loop_recur() {
         let env = env();
 
         assert_eq!(eval_str("(loop (x 2 acc 0) (if (= x 1) acc (recur (- x 1) (+ acc x))))", env.clone()).unwrap(), c_int(2));
+    }
+
+
+    use test::Bencher;
+    use std;
+
+    #[bench]
+    fn bench_counting(b: &mut Bencher) {
+        let env = env();
+        eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
+
+        b.iter(|| {
+            eval_str("(count-1 1000)", env.clone());
+        });
     }
 }
