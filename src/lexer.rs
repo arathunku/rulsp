@@ -88,23 +88,20 @@ pub fn format_tokens(tokens: &Vec<Token>) -> String {
     output
 }
 
-// Use regex set?
 lazy_static! {
-    static ref TOKEN_MATCHES: Vec<(&'static str, Regex)> = {
-        vec![
-            ("whitespace", Regex::new(r"^\s+").unwrap()),
-            ("oparen", Regex::new(r"^\(").unwrap()),
-            ("cparen", Regex::new(r"^\)").unwrap()),
-            ("obracket", Regex::new(r"^\[").unwrap()),
-            ("cbracket", Regex::new(r"^\]").unwrap()),
-            ("integer", Regex::new(r"^[0-9]+").unwrap()),
-            ("apostrophe", Regex::new(r"^'").unwrap()),
-            ("backquote", Regex::new(r"^`").unwrap()),
-            ("unquote_splicing", Regex::new(r"^~@").unwrap()),
-            ("unquote", Regex::new(r"^~").unwrap()),
-            ("identifier", Regex::new(r"^([^\s\(\)\[\]\{\}]+)").unwrap()),
-        ]
-    };
+    static ref TOKEN_MATCHES: Regex = Regex::new(r"(?x)
+        (?P<whitespace>^\s+)                 |
+        (?P<oparen>^\()                      |
+        (?P<cparen>^\))                      |
+        (?P<obracket>^\[)                    |
+        (?P<cbracket>^\])                    |
+        (?P<integer>^[0-9]+)                 |
+        (?P<apostrophe>^')                   |
+        (?P<backquote>^`)                    |
+        (?P<unquote_splicing>^~@)            |
+        (?P<unquote>^~)                      |
+        (?P<identifier>^([^\s\(\)\[\]\{\}]+))
+    ").unwrap();
 }
 
 pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
@@ -116,28 +113,29 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
 
         match found_token {
             Ok((name, token)) => {
-                let code_token = &code[0..token.len()];
-
-                if token.cmp(code_token) != Ordering::Equal {
-                    return Result::Err(LexError::InvalidToken(code_token.to_string(),
-                                                              token.to_string()));
-                }
-
+                // let code_token = &code[0..token.len()];
+                // if token.cmp(&code_token.to_string()) != Ordering::Equal {
+                //     return Result::Err(LexError::InvalidToken(code_token.to_string(),
+                //                                               token.to_string()));
+                // }
                 code = &code[token.len()..code.len()];
 
-                tokens.push(match name {
+                tokens.push(match name.as_str() {
                     "whitespace" => Token::Whitespace,
                     "oparen" => Token::Oparen,
                     "cparen" => Token::Cparen,
                     "obracket" => Token::Oparen,
                     "cbrakcet" => Token::Cparen,
-                    "identifier" => Token::Identifier(token.to_string()),
+                    "identifier" => Token::Identifier(token),
                     "integer" => Token::Int(token.parse::<i64>().unwrap()),
                     "apostrophe" => Token::Apostrophe,
                     "backquote" => Token::Backquote,
                     "unquote" => Token::Unquote,
                     "unquote_splicing" => Token::UnquoteSplicing,
-                    _ => unreachable!(),
+                    _ => {
+                        println!("NAME: {:?}", name);
+                        unreachable!()
+                    }
 
                 });
             }
@@ -148,16 +146,14 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
     Result::Ok(tokens)
 }
 
-fn lex_single_token(str: &str) -> Result<(&str, &str), LexError> {
-    for &(ref name, ref matcher) in TOKEN_MATCHES.iter() {
-        let result = matcher.captures(str)
-            .and_then(|caps| caps.at(0))
-            .and_then(|token_content| Some((*name, token_content)));
-
-        if let Some(res) = result {
-            return Result::Ok(res);
+fn lex_single_token(str: &str) -> Result<(String, String), LexError> {
+    for cap in TOKEN_MATCHES.captures_iter(str) {
+        for (name, matched) in cap.iter_named() {
+            if let Some(ref token) = matched {
+                return Result::Ok((name.to_string(), token.to_string()));
+            }
         }
     }
 
-    Result::Err(LexError::Syntax)
+    return Result::Err(LexError::Syntax);
 }
