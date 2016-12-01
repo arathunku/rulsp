@@ -55,9 +55,10 @@ impl Parser {
                     &Token::Cparen => Result::Ok((c_nil(), pos)),
                     &Token::Int(num) => Result::Ok((c_int(num), pos)),
                     &Token::Identifier(ref str) => {
-                        match str.as_str() {
-                            "nil" => Result::Ok((c_nil(), pos)),
-                            _ => Result::Ok((c_symbol(str.clone()), pos)),
+                        if str.to_uppercase() == "NIL" {
+                            Result::Ok((c_nil(), pos))
+                        } else {
+                            Result::Ok((c_symbol(str.clone()), pos))
                         }
                     }
                     &Token::Apostrophe => {

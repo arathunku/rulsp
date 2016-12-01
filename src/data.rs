@@ -182,11 +182,7 @@ pub fn c_int(num: i64) -> AtomVal {
 }
 
 pub fn c_symbol(symbol: String) -> AtomVal {
-    if symbol.to_uppercase() == "nil" {
-        c_nil()
-    } else {
-        Rc::new(AtomType::Symbol(symbol))
-    }
+    Rc::new(AtomType::Symbol(symbol))
 }
 
 pub fn c_list(seq: Vec<AtomVal>) -> AtomVal {

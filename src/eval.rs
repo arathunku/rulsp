@@ -96,19 +96,21 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     let mut env = env.clone();
     let body = safe_get(args, 2);
     let loop_arg = safe_get(args, 1);
-    let arguments_list = match *loop_arg {
-        AtomType::List(ref args) => args.chunks(2),
+    let arguments_chunks = match *loop_arg {
+        AtomType::List(ref args) => {
+            if args.len() % 2 == 1 {
+                return Err(AtomError::InvalidArgument("Loop is missing value for one of the \
+                                                       param"
+                    .to_string()));
+            }
+            args.chunks(2)
+        }
         ref v => return Err(AtomError::InvalidType("List".to_string(), v.format(true))),
     };
 
-
-    if arguments_list.len() % 2 == 1 {
-        return Err(AtomError::InvalidArgument("Loop is missing value for one of the param"
-            .to_string()));
-    }
     let arguments_names =
-        arguments_list.clone().map(|ref v| (v[0]).clone()).collect::<Vec<AtomVal>>();
-    let mut arguments_values = eval_list_elements(&arguments_list.clone()
+        arguments_chunks.clone().map(|ref v| (v[0]).clone()).collect::<Vec<AtomVal>>();
+    let mut arguments_values = eval_list_elements(&arguments_chunks.clone()
                                                       .map(|ref v| (v[1]).clone())
                                                       .collect::<Vec<AtomVal>>(),
                                                   env.clone())

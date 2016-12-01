@@ -1,12 +1,11 @@
 #![feature(field_init_shorthand)]
 #![feature(test)]
-
 extern crate test;
-
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
 extern crate rustyline;
+extern crate fnv;
 
 #[allow(dead_code)]
 #[allow(unused_imports)]
@@ -72,15 +71,11 @@ fn repl(env: Env) {
 
 fn main() {
     let env = core::build();
-    repl(env);
+    // repl(env);
 
-    // let count = format!("
-    //   (do
-    //     (def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))
-    //     (count-1 {}))
-    // ", std::env::args().nth(1).unwrap_or("5".to_string()));
-
-    // eval_str(count.as_str(), env.clone());
+    eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
+    let count = format!("(count-1 {})", std::env::args().nth(1).unwrap_or("5".to_string()));
+    eval_str(&count, env.clone());
 }
 
 #[cfg(test)]

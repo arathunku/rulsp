@@ -7,6 +7,7 @@ authors = ["arathunku <arathunku@gmail.com>"]
 regex = "0.1.77"
 lazy_static = "0.1.*"
 rustyline = "1.0.0"
+fnv = "1.0.3"
 
 [profile.release]
 debug = true

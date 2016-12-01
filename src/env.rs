@@ -1,13 +1,13 @@
 use super::data::{AtomVal, AtomType, AtomRet, AtomError, c_nil};
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
+use fnv::FnvHashMap;
 
 #[derive(PartialEq)]
 pub struct EnvType {
     parent: Option<Env>,
-    data: HashMap<String, AtomVal>,
+    data: FnvHashMap<String, AtomVal>,
 }
 
 pub type Env = Rc<RefCell<EnvType>>;
@@ -45,16 +45,16 @@ impl fmt::Debug for EnvType {
 pub fn c_env(env: Option<Env>) -> Env {
     Rc::new(RefCell::new(EnvType {
         parent: env,
-        data: HashMap::new(),
+        data: FnvHashMap::default(),
     }))
 }
 
-pub fn env_find(env: &Env, key: &AtomVal) -> Option<Env> {
+fn env_find(env: &Env, key: &AtomVal) -> Option<(Env, AtomVal)> {
     match **key {
         AtomType::Symbol(ref str) => {
             let env_borrow = env.borrow();
             match env_borrow.data.get(str) {
-                Some(_) => Some(env.clone()),
+                Some(value) => Some((env.clone(), value.clone())),
                 None => {
                     if let Some(ref parent) = env_borrow.parent {
                         env_find(parent, key)
@@ -82,17 +82,7 @@ pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) -> AtomRet {
 pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
     match env_find(env, key) {
         None => None,
-        Some(env) => {
-            match **key {
-                AtomType::Symbol(ref k) => {
-                    match env.borrow().data.get(k) {
-                        Some(v) => Some(v.clone()),
-                        None => None,
-                    }
-                }
-                _ => None,
-            }
-        }
+        Some((_, value)) => Some(value),
     }
 }
 
