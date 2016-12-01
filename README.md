@@ -23,3 +23,22 @@ cargo run # will open repl
 - try/catch or maybe more rusty way to handle errors?
 - intercop with Rust(?!)
 - tree analyzer - verify types before execution as much as possible
+
+
+
+## Misc commands
+
+```
+RUST_LOG=rulsp=trace cargo run 2 > trace.log 2>&1
+
+cargo build --release && \
+    perf record -g target/release/rulsp 10000 && \
+    perf script | ~/Applications/FlameGraph/stackcollapse-perf.pl | ~/Applications/FlameGraph/flamegraph.pl > flame-counting.svg
+
+
+rm callgrind.*
+cargo build --release && \
+    valgrind --tool=callgrind target/release/rulsp
+
+callgrind_annotate callgrind.out.* | grep "[[:space:]]src\/*" | head -n 10
+```

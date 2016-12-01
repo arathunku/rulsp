@@ -1,6 +1,6 @@
 #!/usr/bin/bash
-cargo bench --no-run && \
-    perf record -g target/release/rulsp-* --bench counting && \
+cargo build --release && \
+    perf record -g target/release/rulsp && \
     perf script | ~/Applications/FlameGraph/stackcollapse-perf.pl | ~/Applications/FlameGraph/flamegraph.pl > flame-counting.svg
 
 

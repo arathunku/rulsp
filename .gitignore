@@ -4,3 +4,4 @@ test.clj
 *.svg
 *.data*
 callgrind*
+*.log

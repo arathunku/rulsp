@@ -92,6 +92,8 @@ fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 
 // [loop (args...) (body)]
 fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
+    trace!("fn=op_loop args={:?}", args);
+
     use env::{c_env, env_bind, env_set, Env};
     let mut env = env.clone();
     let body = safe_get(args, 2);
@@ -110,7 +112,7 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 
     let arguments_names =
         arguments_chunks.clone().map(|ref v| (v[0]).clone()).collect::<Vec<AtomVal>>();
-    let mut arguments_values = eval_list_elements(&arguments_chunks.clone()
+    let mut arguments_values = eval_list_elements(arguments_chunks.clone()
                                                       .map(|ref v| (v[1]).clone())
                                                       .collect::<Vec<AtomVal>>(),
                                                   env.clone())
@@ -124,7 +126,7 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
         match *result {
             AtomType::List(ref list) => {
                 if safe_get(list, 0) == c_symbol("recur".to_string()) {
-                    arguments_values = eval_list_elements(&list[1..].to_vec(), env.clone())?;
+                    arguments_values = eval_list_elements(list[1..].to_vec(), env.clone())?;
                 } else {
                     break;
                 }
@@ -139,6 +141,8 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
+    trace!("fn=eval_exp ast={}", ast);
+
     match *ast {
         AtomType::List(ref args) => {
             let op_name = match args.get(0) {
@@ -192,11 +196,11 @@ pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
     }
 }
 
-fn eval_list_elements(list: &Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
-    let mut evaled_elements = vec![];
+fn eval_list_elements(list: Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, AtomError> {
+    let mut evaled_elements = Vec::with_capacity(list.len());
 
     for element in list {
-        evaled_elements.push(eval(element.clone(), env.clone())?);
+        evaled_elements.push(eval(element, env.clone())?);
     }
 
     Ok(evaled_elements)
@@ -204,7 +208,7 @@ fn eval_list_elements(list: &Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, Ato
 
 fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
     match *ast {
-        AtomType::List(ref args) => Ok(c_list(eval_list_elements(args, env)?)),
+        AtomType::List(ref args) => Ok(c_list(eval_list_elements(args.clone(), env.clone())?)),
         AtomType::Symbol(ref name) => {
             if let Some(atom) = env_get(&env, &ast) {
                 Ok(atom.clone())

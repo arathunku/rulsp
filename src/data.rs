@@ -2,7 +2,8 @@ use std::fmt::*;
 use std::rc::Rc;
 use std::error::Error as StdError;
 use std::result;
-use env::Env;
+use eval::eval;
+use env::{c_env, env_bind, env_set, Env};
 
 #[derive(Debug, PartialEq)]
 pub enum AtomType {
@@ -102,8 +103,7 @@ impl AtomType {
 
 
     pub fn apply(&self, args: Vec<AtomVal>) -> AtomRet {
-        use eval::eval;
-        use env::{c_env, env_bind, env_set, Env};
+        trace!("fn=AtomData#apply args={:?}", args);
 
         match *self {
             AtomType::Func(f) => f(args),
