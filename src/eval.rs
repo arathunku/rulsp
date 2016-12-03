@@ -6,7 +6,7 @@ use lexer::{lex, format_tokens};
 use parser::Parser;
 
 fn safe_get(args: &Vec<AtomVal>, index: usize) -> AtomVal {
-    args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
+    args.get(index).unwrap_or(&c_nil()).clone()
 }
 
 fn op_quote(args: &Vec<AtomVal>) -> AtomRet {
@@ -14,21 +14,13 @@ fn op_quote(args: &Vec<AtomVal>) -> AtomRet {
 }
 
 fn op_def(args: &Vec<AtomVal>, env: Env) -> AtomRet {
-    let name = try!(args.get(1)
-        .map(|v| v.clone())
-        .ok_or(AtomError::InvalidType("Symbol as name of def".to_string(), "nil".to_string())));
+    trace!("action=op_def args={:?}", args);
+    let name_atom = safe_get(args, 1);
+    let name = name_atom.get_symbol()?;
+    let value = eval(safe_get(args, 2), env.clone())?;
 
-    match *name {
-        AtomType::Symbol(_) => {
-            let value = eval(safe_get(args, 2), env.clone())?;
-
-            let _ = env_set(&env, &name, value);
-            Result::Ok(c_symbol(name.to_string()))
-        }
-        ref v => {
-            return Err(AtomError::InvalidType("Symbol as name of def".to_string(), v.format(true)));
-        }
-    }
+    let _ = env_set(&env, &name_atom, value);
+    Result::Ok(c_symbol(name.to_string()))
 }
 
 fn op_lambda(args: &Vec<AtomVal>, env: Env) -> AtomRet {
@@ -97,26 +89,24 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     use env::{c_env, env_bind, env_set, Env};
     let mut env = env.clone();
     let body = safe_get(args, 2);
-    let loop_arg = safe_get(args, 1);
-    let arguments_chunks = match *loop_arg {
-        AtomType::List(ref args) => {
-            if args.len() % 2 == 1 {
-                return Err(AtomError::InvalidArgument("Loop is missing value for one of the \
-                                                       param"
-                    .to_string()));
-            }
-            args.chunks(2)
-        }
-        ref v => return Err(AtomError::InvalidType("List".to_string(), v.format(true))),
-    };
+    let _loop_args = safe_get(args, 1);
+    let loop_args = _loop_args.get_list()?;
 
-    let arguments_names =
-        arguments_chunks.clone().map(|ref v| (v[0]).clone()).collect::<Vec<AtomVal>>();
-    let mut arguments_values = eval_list_elements(arguments_chunks.clone()
-                                                      .map(|ref v| (v[1]).clone())
-                                                      .collect::<Vec<AtomVal>>(),
-                                                  env.clone())
-        ?;
+    if loop_args.len() % 2 == 1 {
+        return Err(AtomError::InvalidArgument("Loop is missing value for one of the \
+                                               param"
+            .to_string()));
+    }
+
+    let arguments_chunks = loop_args.chunks(2);
+    let mut arguments_names: Vec<AtomVal> = Vec::with_capacity(arguments_chunks.len());
+    let mut values_for_eval: Vec<AtomVal> = Vec::with_capacity(arguments_chunks.len());
+
+    for chunk in arguments_chunks {
+        arguments_names.push(chunk[0].clone());
+        values_for_eval.push(chunk[1].clone());
+    }
+    let mut arguments_values = eval_list_elements(values_for_eval, env.clone())?;
 
     let mut result = c_nil();
     loop {

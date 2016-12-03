@@ -152,6 +152,13 @@ impl AtomType {
         }
 
     }
+
+    pub fn get_symbol<'a>(&'a self) -> result::Result<&'a str, AtomError> {
+        match self {
+            &AtomType::Symbol(ref s) => Ok(s),
+            ref v => Err(AtomError::InvalidType("Symbol".to_string(), v.format(true))),
+        }
+    }
 }
 
 
