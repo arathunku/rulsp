@@ -15,15 +15,8 @@ fn int_op<F>(f: F, args: Vec<AtomVal>) -> AtomRet
     where F: FnOnce(Vec<i64>) -> i64
 {
 
-    let mut ints = vec![];
-    for arg in args.iter() {
-        match **arg {
-            AtomType::Int(i) => ints.push(i),
-            ref v => return Err(AtomError::InvalidType("Int".to_string(), v.format(true))),
-        }
-    }
-
-    Result::Ok(c_int(f(ints)))
+    let ints: Result<Vec<i64>, _> = args.iter().map(|v| v.get_int()).collect();
+    Result::Ok(c_int(f(ints?)))
 }
 
 fn add(args: Vec<AtomVal>) -> AtomRet {
@@ -53,14 +46,9 @@ fn div(args: Vec<AtomVal>) -> AtomRet {
 }
 
 fn cons(args: Vec<AtomVal>) -> AtomRet {
-    match *safe_get(args.clone(), 1) {
-        AtomType::List(ref seq) => {
-            let mut list = seq.clone();
-            list.insert(0, safe_get(args.clone(), 0));
-            Ok(c_list(list))
-        }
-        ref v => Err(AtomError::InvalidType("List".to_string(), v.format(true))),
-    }
+    let mut list = safe_get(args.clone(), 1).get_list()?.clone();
+    list.insert(0, safe_get(args.clone(), 0));
+    Ok(c_list(list))
 }
 
 fn list(args: Vec<AtomVal>) -> AtomRet {
@@ -83,27 +71,21 @@ fn is_nil(args: Vec<AtomVal>) -> AtomRet {
 
 
 fn count(args: Vec<AtomVal>) -> AtomRet {
-    match *safe_get(args.clone(), 0) {
-        AtomType::List(ref seq) => Ok(c_int(seq.len() as i64)),
-        ref v => Err(AtomError::InvalidType("List".to_string(), v.format(true))),
-    }
+    Ok(c_int(safe_get(args.clone(), 0).get_list()?.len() as i64))
 }
 
 
 fn nth(args: Vec<AtomVal>) -> AtomRet {
-    let ref list = *safe_get(args.clone(), 0);
-    let ref el = *safe_get(args.clone(), 1);
+    trace!("action=nth args={:?}", args);
+    let n = safe_get(args.clone(), 1).get_int().unwrap_or(0);
 
-    match (list, el) {
-        (&AtomType::List(ref seq), &AtomType::Int(ref n)) => Ok(safe_get(seq.clone(), *n as usize)),
-        (_, _) => Ok(c_nil()),
-    }
+    Ok(safe_get(safe_get(args.clone(), 0).get_list()?.clone(), n as usize))
 }
 
 
 fn rest(args: Vec<AtomVal>) -> AtomRet {
-    match *safe_get(args.clone(), 0) {
-        AtomType::List(ref seq) => {
+    match safe_get(args.clone(), 0).get_list() {
+        Ok(seq) => {
             if seq.len() > 0 {
                 Ok(c_list(seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>()))
             } else {
@@ -188,4 +170,21 @@ pub fn build() -> Env {
     eval_str(s.as_str(), env.clone()).expect("Problem loading core.clrs into ENV");
 
     env
+}
+
+#[cfg(test)]
+mod tests {
+    use super::add;
+    use data::c_int;
+
+    use test::Bencher;
+    use std;
+
+    #[bench]
+    fn bench_adding(b: &mut Bencher) {
+        let args = vec![c_int(1), c_int(1)];
+
+        b.iter(|| add(args.clone()));
+    }
+
 }

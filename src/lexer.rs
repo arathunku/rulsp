@@ -51,12 +51,14 @@ pub enum Token {
     Backquote,
     Unquote,
     UnquoteSplicing,
+    Comment,
 }
 
 impl Token {
     pub fn is_hidden(&self) -> bool {
         match self {
             &Token::Whitespace => true,
+            &Token::Comment => true,
             _ => false,
         }
     }
@@ -91,6 +93,7 @@ pub fn format_tokens(tokens: &Vec<Token>) -> String {
 lazy_static! {
     static ref TOKEN_MATCHES: Regex = Regex::new(r"(?x)
         (?P<whitespace>^\s+)                 |
+        (?P<comment>;(.*)\n)                 |
         (?P<oparen>^\()                      |
         (?P<cparen>^\))                      |
         (?P<obracket>^\[)                    |
@@ -132,6 +135,7 @@ pub fn lex(content: &str) -> Result<Vec<Token>, LexError> {
                     "backquote" => Token::Backquote,
                     "unquote" => Token::Unquote,
                     "unquote_splicing" => Token::UnquoteSplicing,
+                    "comment" => Token::Comment,
                     _ => {
                         println!("NAME: {:?}", name);
                         unreachable!()

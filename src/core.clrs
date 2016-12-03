@@ -29,8 +29,10 @@
                (do
                  (if (= 'unquote (first args))
                    (second args)
-                   (if (= 'unquote-splicing (first (first args)))
-                     (list 'concat (second (first args)) (list 'backquote (rest (rest args))))
+                   (if (list? (first args))
+                     (if (= 'unquote-splicing (first (first args)))
+                       (list 'concat (second (first args)) (list 'backquote (rest (rest args))))
+                       (list 'cons (list 'backquote (first args)) (list 'backquote (rest args))))
                      (list 'cons (list 'backquote (first args)) (list 'backquote (rest args))))))
                (list 'quote '()))
              (list 'quote args)))))

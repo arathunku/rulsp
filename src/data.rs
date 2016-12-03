@@ -103,8 +103,6 @@ impl AtomType {
 
 
     pub fn apply(&self, args: Vec<AtomVal>) -> AtomRet {
-        trace!("fn=AtomData#apply args={:?}", args);
-
         match *self {
             AtomType::Func(f) => f(args),
             AtomType::AFunc(ref fd) => {
@@ -132,11 +130,27 @@ impl AtomType {
                     ref v => return Err(AtomError::InvalidType("list".to_string(), v.format(true)))
                 }
 
-                // println!("ENV FUNC: {:?}", func_env);
+                trace!("action=AtomType#apply env={:?}", func_env);
                 eval(fd.exp, func_env)
             },
             _ => Err(AtomError::InvalidType("function".to_string(), self.format(true)))
         }
+    }
+
+    pub fn get_int(&self) -> result::Result<i64, AtomError> {
+        match self {
+            &AtomType::Int(i) => Ok(i),
+            ref v => Err(AtomError::InvalidType("Int".to_string(), v.format(true))),
+        }
+    }
+
+    pub fn get_list<'a>(&'a self) -> result::Result<&'a Vec<AtomVal>, AtomError>{
+        trace!("action=AtomType#get_list self={}", self.format(true));
+        match self {
+            &AtomType::List(ref list) => Ok(list),
+            ref v => Err(AtomError::InvalidType("List".to_string(), v.format(true))),
+        }
+
     }
 }
 

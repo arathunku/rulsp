@@ -141,58 +141,53 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
-    trace!("fn=eval_exp ast={}", ast);
-
-    match *ast {
-        AtomType::List(ref args) => {
-            let op_name = match args.get(0) {
-                None => return Ok(ast.clone()),
-                Some(op) => {
-                    match **op {
-                        AtomType::Symbol(ref v) => v.as_str(),
-                        _ => "__func__",
-                    }
-                }
-            };
-
-            match op_name {
-                "quote" => op_quote(args),
-                "p_env" => {
-                    println!("{:?}", env);
-                    Ok(c_nil())
-                }
-                "def" => op_def(args, env),
-                "if" => op_if(args, env),
-                "fn*" => op_lambda(args, env),
-                "loop" => op_loop(args, env),
-                "recur" => Ok(ast.clone()),
-                "defmacro" => op_macro(args, env),
-                "eval" => eval(eval(safe_get(args, 1), env.clone())?, env),
-                "do" => {
-                    let evaled_args = eval_ast(c_list(args[1..].to_vec()), env)?;
-                    match *evaled_args {
-                        AtomType::List(ref args) => Ok(args.last().unwrap_or(&c_nil()).clone()),
-                        _ => Ok(c_nil()),
-                    }
-                }
-                "macroexpand" => {
-                    op_macroexpand(eval_exp(safe_get(args, 1), env.clone())?, env.clone())
-                }
-                // Some function call with evaled arguments
-                _ => {
-                    let evaled_args = eval_ast(ast.clone(), env)?;
-                    let args = match *evaled_args {
-                        AtomType::List(ref args) => args,
-                        _ => return Err(AtomError::InvalidOperation(op_name.to_string())),
-                    };
-
-                    let subject_func = &args[0].clone();
-                    subject_func.apply(args[1..].to_vec())
-                }
-
+    let args = ast.get_list()?;
+    let op_name = match args.get(0) {
+        None => return Ok(ast.clone()),
+        Some(op) => {
+            match **op {
+                AtomType::Symbol(ref v) => v.as_str(),
+                _ => "__func__",
             }
         }
-        _ => unreachable!(),
+    };
+
+    match op_name {
+        "quote" => op_quote(args),
+        "p_env" => {
+            println!("{:?}", env);
+            Ok(c_nil())
+        }
+        "def" => op_def(args, env),
+        "if" => op_if(args, env),
+        "fn*" => op_lambda(args, env),
+        "loop" => op_loop(args, env),
+        "recur" => Ok(ast.clone()),
+        "defmacro" => op_macro(args, env),
+        "eval" => eval(eval(safe_get(args, 1), env.clone())?, env),
+        "do" => {
+            let evaled_args = eval_ast(c_list(args[1..].to_vec()), env)?;
+            match evaled_args.get_list() {
+                Ok(args) => Ok(args.last().unwrap_or(&c_nil()).clone()),
+                _ => Ok(c_nil()),
+            }
+        }
+        "macroexpand" => op_macroexpand(eval_exp(safe_get(args, 1), env.clone())?, env.clone()),
+        // Some function call with evaled arguments
+        _ => {
+            let evaled_args = eval_ast(ast.clone(), env)?;
+            let args = match evaled_args.get_list() {
+                Ok(args) => args,
+                _ => return Err(AtomError::InvalidOperation(op_name.to_string())),
+            };
+
+            trace!("fn=eval_exp op_name={} args={:?}",
+                   op_name,
+                   args[1..].to_vec());
+            let subject_func = &args[0].clone();
+            subject_func.apply(args[1..].to_vec())
+        }
+
     }
 }
 
@@ -207,6 +202,8 @@ fn eval_list_elements(list: Vec<AtomVal>, env: Env) -> Result<Vec<AtomVal>, Atom
 }
 
 fn eval_ast(ast: AtomVal, env: Env) -> AtomRet {
+    trace!("fn=eval_ast ast={}", ast.format(true));
+
     match *ast {
         AtomType::List(ref args) => Ok(c_list(eval_list_elements(args.clone(), env.clone())?)),
         AtomType::Symbol(ref name) => {
@@ -237,7 +234,7 @@ pub fn eval_str(str: &str, env: Env) -> AtomRet {
     let tokens = lex(str);
     match tokens {
         Ok(ref tokens) => {
-            let prefix = format!("exp: {} -> lex: {}", str, format_tokens(tokens));
+            // let prefix = format!("exp: {} -> lex: {}", str, format_tokens(tokens));
             let parser = Parser::new(tokens);
             match parser.start() {
                 Ok(ast) => {
@@ -255,7 +252,7 @@ pub fn eval_str(str: &str, env: Env) -> AtomRet {
 
                 }
                 Err(err) => {
-                    println!("{} -> ast: {}", prefix, err);
+                    println!("{} -> ast: {}", str, err);
                     // FIXME: should return correct err;
                     return Ok(c_nil());
                 }
