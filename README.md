@@ -1,4 +1,4 @@
-list _almost_ based on [lisp](http://www.lwh.jp/lisp)
+lisp _almost_ based on [lisp](http://www.lwh.jp/lisp)
 
 
 # Run
@@ -6,7 +6,8 @@ list _almost_ based on [lisp](http://www.lwh.jp/lisp)
 
 ```
 cargo install
-cargo run repl # will open repl
+cargo build --release
+./target/release/rulsp repl
 ```
 
 
@@ -20,8 +21,9 @@ cargo run repl # will open repl
 - strings
 - more comp funcs (>, <, <=, >=, ...?)
 - floats
-- try/catch or maybe more rusty way to handle errors?
+- try/catch or maybe more rusty way to handle errors? with Result
 - intercop with Rust(?!)
+- get rid of nil and have Option<>
 - tree analyzer - verify types before execution as much as possible
 
 
