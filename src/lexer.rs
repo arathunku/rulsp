@@ -1,8 +1,8 @@
 use std::fmt;
 use std::error::Error as StdError;
 use regex::Regex;
-use std::cmp::Ordering;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum LexError {
     Syntax,
@@ -74,6 +74,7 @@ impl fmt::Display for Token {
     }
 }
 
+#[allow(dead_code)]
 pub fn format_tokens(tokens: &Vec<Token>) -> String {
     let mut output = String::new();
 

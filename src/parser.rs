@@ -126,7 +126,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use data::{c_symbol, c_int, c_list};
-    use lexer::{Token, lex};
+    use lexer::lex;
     use super::Parser;
 
     #[test]

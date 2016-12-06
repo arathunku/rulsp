@@ -1,4 +1,4 @@
-use super::data::{AtomVal, AtomType, AtomRet, AtomError, c_nil};
+use super::data::{AtomVal, AtomType, AtomRet, c_nil};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
@@ -93,10 +93,11 @@ pub fn env_bind(env: &Env, params: &Vec<AtomVal>, args: &Vec<AtomVal>) -> AtomRe
     Ok(c_nil())
 }
 
+#[allow(unused_must_use)]
 #[cfg(test)]
 mod tests {
     use super::{c_env, env_set, env_get};
-    use super::super::data::{c_symbol, c_int};
+    use data::{c_symbol, c_int};
 
     #[test]
     fn test_c_env() {

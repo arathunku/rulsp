@@ -10,34 +10,19 @@ extern crate fnv;
 extern crate log;
 extern crate env_logger;
 
-#[allow(dead_code)]
-#[allow(unused_imports)]
 mod data;
-#[allow(dead_code)]
-#[allow(unused_imports)]
 mod lexer;
-#[allow(dead_code)]
-#[allow(unused_imports)]
 mod parser;
-#[allow(dead_code)]
-#[allow(unused_imports)]
-#[allow(unused_variables)]
 mod env;
-#[allow(dead_code)]
-#[allow(unused_imports)]
-#[allow(unused_variables)]
 mod eval;
-#[allow(unused_must_use)]
-#[allow(dead_code)]
-#[allow(unused_imports)]
 mod core;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use data::{c_nil, AtomRet};
 use env::{Env};
 use eval::eval_str;
 
+#[allow(dead_code)]
 fn repl(env: Env) {
     let mut rl = Editor::<()>::new();
     if let Err(_) = rl.load_history("history.txt") {
@@ -73,29 +58,23 @@ fn repl(env: Env) {
 }
 
 fn main() {
-    env_logger::init().unwrap();
+    // env_logger::init().unwrap();
     let env = core::build();
     // Tracing for core initialization omitted for now
     // repl(env.clone());
 
-    eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
+    let _ = eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
     let count = format!("(count-1 {})", std::env::args().nth(1).unwrap_or("5".to_string()));
-    eval_str(&count, env.clone());
+    let _ = eval_str(&count, env.clone());
 }
 
+#[allow(unused_must_use)]
 #[cfg(test)]
 mod tests {
     use ::eval::eval_str;
     use ::core;
     use ::env::{Env, env_get};
-    use ::data::{AtomRet, AtomError, c_int, c_symbol, c_list, c_nil};
-
-    pub fn print(v: AtomRet) -> String {
-        match v {
-            Ok(ref atom) => format!("{}", atom),
-            Err(err) => format!("{}", err),
-        }
-    }
+    use ::data::{AtomError, c_int, c_symbol, c_list, c_nil};
 
     fn env() -> Env {
         core::build()
@@ -197,7 +176,6 @@ mod tests {
 
 
     use test::Bencher;
-    use std;
 
     #[bench]
     fn bench_counting(b: &mut Bencher) {

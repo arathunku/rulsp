@@ -1,8 +1,6 @@
-use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_afunc, c_symbol,
-           c_macro, AFuncData};
-use env::{c_env, env_set, env_get, Env};
-use std::fmt;
-use lexer::{lex, format_tokens};
+use data::{AtomVal, AtomType, AtomRet, AtomError, c_nil, c_list, c_afunc, c_symbol, c_macro};
+use env::{env_set, env_get, env_bind, Env};
+use lexer::lex;
 use parser::Parser;
 
 fn safe_get(args: &Vec<AtomVal>, index: usize) -> AtomVal {
@@ -83,11 +81,11 @@ fn op_if(args: &Vec<AtomVal>, env: Env) -> AtomRet {
 }
 
 // [loop (args...) (body)]
+#[allow(unused_assignments)]
 fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     trace!("fn=op_loop args={:?}", args);
 
-    use env::{c_env, env_bind, env_set, Env};
-    let mut env = env.clone();
+    let env = env.clone();
     let body = safe_get(args, 2);
     let _loop_args = safe_get(args, 1);
     let loop_args = _loop_args.get_list()?;
@@ -108,26 +106,29 @@ fn op_loop(args: &Vec<AtomVal>, env: Env) -> AtomRet {
     }
     let mut arguments_values = eval_list_elements(values_for_eval, env.clone())?;
 
-    let mut result = c_nil();
+    let mut result = None;
     loop {
         env_bind(&env, &arguments_names, &arguments_values)?;
-        result = eval(body.clone(), env.clone())?;
+        result = Some(eval(body.clone(), env.clone())?);
 
-        match *result {
-            AtomType::List(ref list) => {
-                if safe_get(list, 0) == c_symbol("recur".to_string()) {
-                    arguments_values = eval_list_elements(list[1..].to_vec(), env.clone())?;
-                } else {
+        if let Some(ref result) = result {
+            match result.get_list() {
+                Ok(list) => {
+                    if safe_get(list, 0) == c_symbol("recur".to_string()) {
+                        arguments_values = eval_list_elements(list[1..].to_vec(), env.clone())?;
+                    } else {
+                        break;
+                    }
+                }
+                _ => {
                     break;
                 }
             }
-            _ => {
-                break;
-            }
         }
+
     }
 
-    Ok(result)
+    Ok(result.unwrap_or(c_nil()))
 }
 
 pub fn eval_exp(ast: AtomVal, env: Env) -> AtomRet {
@@ -261,8 +262,8 @@ pub fn eval_str(str: &str, env: Env) -> AtomRet {
 #[cfg(test)]
 mod tests {
     use super::eval;
-    use super::super::data::{c_symbol, c_int, c_list, AtomRet, AtomError};
-    use super::super::env::{c_env, Env};
+    use data::{c_symbol, c_int, c_list, AtomRet, AtomError};
+    use env::Env;
 
     pub fn print(v: AtomRet) -> String {
         match v {

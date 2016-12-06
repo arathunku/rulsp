@@ -1,11 +1,9 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use env::{c_env, env_set, env_get, Env};
-use data::{AtomVal, AtomType, AtomRet, AtomError, c_int, c_nil, c_list, c_symbol, c_func, c_vec};
+use env::{c_env, env_set, Env};
+use data::{AtomVal, AtomType, AtomRet, c_int, c_nil, c_list, c_symbol, c_func};
 use eval::eval_str;
-use parser::Parser;
-
 
 fn safe_get(args: Vec<AtomVal>, index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
@@ -139,6 +137,7 @@ fn _print(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
+#[allow(unused_must_use)]
 pub fn build() -> Env {
     let env = c_env(None);
 
@@ -176,9 +175,7 @@ pub fn build() -> Env {
 mod tests {
     use super::add;
     use data::c_int;
-
     use test::Bencher;
-    use std;
 
     #[bench]
     fn bench_adding(b: &mut Bencher) {
