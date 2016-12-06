@@ -45,7 +45,7 @@ fn repl(env: Env) {
                 break;
             }
             Err(ReadlineError::Eof) => {
-                println!("CTRL-D");
+                println!("CTRLs-D");
                 break;
             }
             Err(err) => {
@@ -57,15 +57,28 @@ fn repl(env: Env) {
     rl.save_history("history.txt").unwrap();
 }
 
-fn main() {
-    // env_logger::init().unwrap();
-    let env = core::build();
-    // Tracing for core initialization omitted for now
-    // repl(env.clone());
+#[allow(unused_must_use)]
+fn count(n: String, env: Env) {
+    eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
+    eval_str(&format!("(count-1 {})", n), env.clone());
+}
 
-    let _ = eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
-    let count = format!("(count-1 {})", std::env::args().nth(1).unwrap_or("5".to_string()));
-    let _ = eval_str(&count, env.clone());
+fn main() {
+    env_logger::init().unwrap();
+    let env = core::build();
+
+    match std::env::args().nth(1) {
+        Some(value) => {
+            if "repl" == value  {
+                repl(env);
+            } else {
+                count(value, env)
+            }
+        },
+        None => {
+            println!("Pass repl or any number as a first param to count")
+        }
+    };
 }
 
 #[allow(unused_must_use)]

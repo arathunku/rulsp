@@ -6,7 +6,7 @@ list _almost_ based on [lisp](http://www.lwh.jp/lisp)
 
 ```
 cargo install
-cargo run # will open repl
+cargo run repl # will open repl
 ```
 
 
