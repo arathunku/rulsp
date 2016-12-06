@@ -1,0 +1,7 @@
+target
+history.txt
+test.clj
+/*.svg
+*.data*
+callgrind*
+*.log
