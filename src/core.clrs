@@ -41,5 +41,5 @@
          `((fn* ~(map first defs) ~@body)
            ~@(map second defs))))
 
-  (def + (let ((core+ +)) (fn* (& xs) (reduce core+ 0 xs))))
+  ;; (def + (let ((core+ +)) (fn* (& xs) (reduce core+ 0 xs))))
 )

@@ -5,11 +5,11 @@ use env::{c_env, env_set, Env};
 use data::{AtomVal, AtomType, AtomRet, c_int, c_nil, c_list, c_symbol, c_func};
 use eval::eval_str;
 
-fn safe_get(args: Vec<AtomVal>, index: usize) -> AtomVal {
+fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
 }
 
-fn int_op<F>(f: F, args: Vec<AtomVal>) -> AtomRet
+fn int_op<F>(f: F, args: &[AtomVal]) -> AtomRet
     where F: FnOnce(Vec<i64>) -> i64
 {
 
@@ -17,11 +17,11 @@ fn int_op<F>(f: F, args: Vec<AtomVal>) -> AtomRet
     Result::Ok(c_int(f(ints?)))
 }
 
-fn add(args: Vec<AtomVal>) -> AtomRet {
+fn add(args: &[AtomVal]) -> AtomRet {
     int_op(|values| values.iter().fold(0i64, |acc, v| acc + v), args)
 }
 
-fn sub(args: Vec<AtomVal>) -> AtomRet {
+fn sub(args: &[AtomVal]) -> AtomRet {
     int_op(|values| {
                values.iter()
                    .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y - x)))
@@ -30,11 +30,11 @@ fn sub(args: Vec<AtomVal>) -> AtomRet {
            args)
 }
 
-fn mul(args: Vec<AtomVal>) -> AtomRet {
+fn mul(args: &[AtomVal]) -> AtomRet {
     int_op(|values| values.iter().fold(1i64, |acc, v| acc * v), args)
 }
 
-fn div(args: Vec<AtomVal>) -> AtomRet {
+fn div(args: &[AtomVal]) -> AtomRet {
     int_op(|values| {
                values.iter()
                    .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y / x)))
@@ -43,24 +43,24 @@ fn div(args: Vec<AtomVal>) -> AtomRet {
            args)
 }
 
-fn cons(args: Vec<AtomVal>) -> AtomRet {
+fn cons(args: &[AtomVal]) -> AtomRet {
     let mut list = safe_get(args.clone(), 1).get_list()?.clone();
     list.insert(0, safe_get(args.clone(), 0));
-    Ok(c_list(list))
+    Ok(c_list(&list))
 }
 
-fn list(args: Vec<AtomVal>) -> AtomRet {
-    Ok(c_list(args))
+fn list(args: &[AtomVal]) -> AtomRet {
+    Ok(c_list(&args))
 }
 
-fn is_list(args: Vec<AtomVal>) -> AtomRet {
+fn is_list(args: &[AtomVal]) -> AtomRet {
     match *safe_get(args.clone(), 0) {
         AtomType::List(_) => Ok(c_int(1)),
         _ => Ok(c_nil()),
     }
 }
 
-fn is_nil(args: Vec<AtomVal>) -> AtomRet {
+fn is_nil(args: &[AtomVal]) -> AtomRet {
     match *safe_get(args.clone(), 0) {
         AtomType::Nil => Ok(c_int(1)),
         _ => Ok(c_nil()),
@@ -68,33 +68,33 @@ fn is_nil(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
-fn count(args: Vec<AtomVal>) -> AtomRet {
+fn count(args: &[AtomVal]) -> AtomRet {
     Ok(c_int(safe_get(args.clone(), 0).get_list()?.len() as i64))
 }
 
 
-fn nth(args: Vec<AtomVal>) -> AtomRet {
+fn nth(args: &[AtomVal]) -> AtomRet {
     trace!("action=nth args={:?}", args);
     let n = safe_get(args.clone(), 1).get_int().unwrap_or(0);
 
-    Ok(safe_get(safe_get(args.clone(), 0).get_list()?.clone(), n as usize))
+    Ok(safe_get(&safe_get(args.clone(), 0).get_list()?.clone(), n as usize))
 }
 
 
-fn rest(args: Vec<AtomVal>) -> AtomRet {
+fn rest(args: &[AtomVal]) -> AtomRet {
     match safe_get(args.clone(), 0).get_list() {
         Ok(seq) => {
             if seq.len() > 0 {
-                Ok(c_list(seq[1..seq.len()].iter().map(|v| v.clone()).collect::<Vec<AtomVal>>()))
+                Ok(c_list(&seq[1..seq.len()]))
             } else {
-                Ok(c_list(vec![]))
+                Ok(c_list(&[]))
             }
         }
         _ => Ok(c_nil()),
     }
 }
 
-fn partialeq(args: Vec<AtomVal>) -> AtomRet {
+fn partialeq(args: &[AtomVal]) -> AtomRet {
     let mut output = c_int(1);
     for (i, arg) in args.iter().enumerate() {
         let next_arg = args.get(i + 1);
@@ -109,29 +109,29 @@ fn partialeq(args: Vec<AtomVal>) -> AtomRet {
 }
 
 
-fn format_args(args: &Vec<AtomVal>, format: bool) -> String {
+fn format_args(args: &[AtomVal], format: bool) -> String {
     args.iter()
         .map(|ref v| v.format(format))
         .collect::<Vec<_>>()
         .join(" ")
 }
 
-fn println(args: Vec<AtomVal>) -> AtomRet {
+fn println(args: &[AtomVal]) -> AtomRet {
     println!("{}", format_args(&args, false));
     Ok(safe_get(args, 0))
 }
 
-fn print(args: Vec<AtomVal>) -> AtomRet {
+fn print(args: &[AtomVal]) -> AtomRet {
     print!("{}", format_args(&args, false));
     Ok(safe_get(args, 0))
 }
 
-fn _println(args: Vec<AtomVal>) -> AtomRet {
+fn _println(args: &[AtomVal]) -> AtomRet {
     println!("{}", format_args(&args, true));
     Ok(safe_get(args, 0))
 }
 
-fn _print(args: Vec<AtomVal>) -> AtomRet {
+fn _print(args: &[AtomVal]) -> AtomRet {
     print!("{}", format_args(&args, true));
     Ok(safe_get(args, 0))
 }
@@ -179,9 +179,9 @@ mod tests {
 
     #[bench]
     fn bench_adding(b: &mut Bencher) {
-        let args = vec![c_int(1), c_int(1)];
+        let args = [c_int(1), c_int(1)];
 
-        b.iter(|| add(args.clone()));
+        b.iter(|| add(&args));
     }
 
 }

@@ -4,13 +4,15 @@ use std::result;
 use eval::eval;
 use env::{c_env, env_bind, env_set, Env};
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum AtomType {
     Nil,
     Int(i64),
     Symbol(String),
     List(Vec<AtomVal>),
-    Func(fn(Vec<AtomVal>) -> AtomRet),
+    Vec(Vec<AtomVal>),
+    Func(AtomFunc),
     AFunc(AFuncData), // user defined function
 }
 
@@ -23,6 +25,21 @@ pub struct AFuncData {
     pub is_macro: bool
 }
 
+pub struct AtomFunc(fn(&[AtomVal]) -> AtomRet);
+
+impl Debug for AtomFunc {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "<fn>")
+    }
+}
+
+impl PartialEq for AtomFunc {
+    fn eq(&self, _other: &AtomFunc) -> bool {
+        false
+    }
+}
+
+
 impl Display for AtomType {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}", self.format(false))
@@ -34,7 +51,7 @@ impl AtomType {
         if with_type {
             match self {
                 &AtomType::Int(num) => format!("Int({})", num),
-                &AtomType::List(ref seq) => {
+                &AtomType::List(ref seq) | &AtomType::Vec(ref seq) => {
                     let list = seq.iter()
                         .map(|ref v| v.format(true))
                         .collect::<Vec<_>>()
@@ -61,7 +78,7 @@ impl AtomType {
         } else {
             match self {
                 &AtomType::Int(num) => format!("{}", num),
-                &AtomType::List(ref seq) => {
+                &AtomType::List(ref seq) | &AtomType::Vec(ref seq) => {
                     let list = seq.iter()
                         .map(|ref v| v.format(false))
                         .collect::<Vec<_>>()
@@ -84,9 +101,9 @@ impl AtomType {
     }
 
 
-    pub fn apply(&self, args: Vec<AtomVal>) -> AtomRet {
+    pub fn apply(&self, args: &[AtomVal]) -> AtomRet {
         match *self {
-            AtomType::Func(f) => f(args),
+            AtomType::Func(AtomFunc(f)) => f(args),
             AtomType::AFunc(ref fd) => {
                 let fd = fd.clone();
                 let func_env = c_env(Some(fd.env.clone()));
@@ -97,11 +114,11 @@ impl AtomType {
                         env_bind(&func_env, params, &args)?;
 
                         let args_count = params.clone().iter().take_while(|v| **v != ampersand).count();
-                        let rest = args.into_iter().skip(args_count).collect::<Vec<AtomVal>>();
+                        let rest = args.iter().cloned().skip(args_count).collect::<Vec<AtomVal>>();
 
                         if args_count != params.iter().count() && params.get(args_count + 1).is_some() {
                             if rest.len() > 0 {
-                                env_set(&func_env, params.get(args_count + 1).unwrap(), c_list(rest))?;
+                                env_set(&func_env, params.get(args_count + 1).unwrap(), c_list(&rest))?;
                             } else {
                                 env_set(&func_env, params.get(args_count + 1).unwrap(), c_nil())?;
 
@@ -188,12 +205,12 @@ pub fn c_symbol(symbol: String) -> AtomVal {
     Rc::new(AtomType::Symbol(symbol))
 }
 
-pub fn c_list(seq: Vec<AtomVal>) -> AtomVal {
-    Rc::new(AtomType::List(seq))
+pub fn c_list(seq: &[AtomVal]) -> AtomVal {
+    Rc::new(AtomType::List(seq.into_iter().cloned().collect::<Vec<AtomVal>>()))
 }
 
-pub fn c_func(f: fn(Vec<AtomVal>) -> AtomRet) -> AtomVal {
-    Rc::new(AtomType::Func(f))
+pub fn c_func(f: fn(&[AtomVal]) -> AtomRet) -> AtomVal {
+    Rc::new(AtomType::Func(AtomFunc(f)))
 }
 
 
@@ -235,7 +252,7 @@ mod tests {
     fn test_list() {
         let foo = c_int(0);
         let bar = c_int(1);
-        let list = c_list(vec![foo, bar]);
+        let list = c_list(&[foo, bar]);
 
         assert_eq!(format!("{}", list), "(0 1)");
     }
@@ -245,8 +262,8 @@ mod tests {
         let foo = c_int(0);
         let bar = c_int(1);
         let baz = c_int(2);
-        let list = c_list(vec![foo, bar]);
-        let list2 = c_list(vec![list, baz]);
+        let list = c_list(&[foo, bar]);
+        let list2 = c_list(&[list, baz]);
 
 
         assert_eq!(format!("{}", list2), "((0 1) 2)");

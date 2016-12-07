@@ -1,5 +1,9 @@
 #![feature(field_init_shorthand)]
 #![feature(test)]
+
+#![feature(alloc_system)]
+extern crate alloc_system;
+
 extern crate test;
 extern crate regex;
 #[macro_use]
@@ -148,7 +152,7 @@ mod tests {
         assert_eq!(eval_str("((fn* (x & y) y) 1)", env()).unwrap(),
                    c_nil());
         assert_eq!(eval_str("((fn* (x & y) y) 1 2 3)", env()).unwrap(),
-                   c_list(vec![c_int(2), c_int(3)]));
+                   c_list(&[c_int(2), c_int(3)]));
         assert_eq!(eval_str("((fn* (x & y) x) 2)", env()).unwrap(),
                    c_int(2));
 

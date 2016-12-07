@@ -6,6 +6,6 @@ cargo build --release && \
 
 rm callgrind.*
 cargo build --release && \
-    valgrind --tool=callgrind target/release/rulsp
+    valgrind --tool=callgrind target/release/rulsp 10000
 
 callgrind_annotate callgrind.out.* | grep "[[:space:]]src\/*" | head -n 10
