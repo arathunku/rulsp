@@ -130,7 +130,7 @@ impl AtomType {
                 }
 
                 trace!("action=AtomType#apply env={:?}", func_env);
-                eval(fd.exp, &func_env)
+                eval(&fd.exp, &func_env)
             },
             _ => Err(AtomError::InvalidType("function".to_string(), self.format(true)))
         }

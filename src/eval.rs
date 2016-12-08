@@ -15,7 +15,7 @@ fn op_def(args: &[AtomVal], env: &Env) -> AtomRet {
     trace!("action=op_def args={:?}", args);
     let name_atom = safe_get(args, 1);
     let name = name_atom.get_symbol()?;
-    let value = eval(safe_get(args, 2), env)?;
+    let value = eval(&safe_get(args, 2), env)?;
 
     let _ = env_set(&env, &name_atom, value);
     Result::Ok(c_symbol(name.to_string()))
@@ -26,7 +26,7 @@ fn op_lambda(args: &[AtomVal], env: &Env) -> AtomRet {
 }
 
 fn op_macro(args: &[AtomVal], env: &Env) -> AtomRet {
-    let result = eval(safe_get(args, 2), env)?;
+    let result = eval(&safe_get(args, 2), env)?;
     match *result {
         AtomType::AFunc(ref fd) => op_def(&vec![c_nil(), safe_get(args, 1), c_macro(&fd)], env),
         _ => unreachable!(),
@@ -49,8 +49,9 @@ fn is_macro_call(ast: AtomVal, env: &Env) -> bool {
     }
 }
 
-fn op_macroexpand(mut ast: AtomVal, env: &Env) -> AtomRet {
+fn op_macroexpand(ast: &AtomVal, env: &Env) -> AtomRet {
     // println!("IS MACRO CALL: {:?}", ast);
+    let mut ast = ast.clone();
     while is_macro_call(ast.clone(), env) {
         let new_ast = ast.clone();
 
@@ -71,10 +72,10 @@ fn op_macroexpand(mut ast: AtomVal, env: &Env) -> AtomRet {
 }
 
 fn op_if(args: &[AtomVal], env: &Env) -> AtomRet {
-    let result = eval(safe_get(args, 1), env)?;
+    let result = eval(&safe_get(args, 1), env)?;
     match *result {
-        AtomType::Nil => eval(safe_get(args, 3), env),
-        _ => eval(safe_get(args, 2), env),
+        AtomType::Nil => eval(&safe_get(args, 3), env),
+        _ => eval(&safe_get(args, 2), env),
     }
 }
 
@@ -83,7 +84,7 @@ fn op_if(args: &[AtomVal], env: &Env) -> AtomRet {
 fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
     trace!("fn=op_loop args={:?}", args);
 
-    let body = safe_get(args, 2);
+    let ref body = safe_get(args, 2);
     let _loop_args = safe_get(args, 1);
     let loop_args = _loop_args.get_list()?;
 
@@ -107,7 +108,7 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
     let recur_symbol = c_symbol("recur".to_string());
     loop {
         env_bind(&env, &arguments_names, &arguments_values)?;
-        result = Some(eval(body.clone(), &env)?);
+        result = Some(eval(body, &env)?);
 
         if let Some(ref result) = result {
             match result.get_list() {
@@ -129,7 +130,7 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
     Ok(result.unwrap_or(c_nil()))
 }
 
-pub fn eval_exp(ast: AtomVal, env: &Env) -> AtomRet {
+pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
     let args = ast.get_list()?;
     let op_name = match args.get(0) {
         None => return Ok(ast.clone()),
@@ -153,18 +154,18 @@ pub fn eval_exp(ast: AtomVal, env: &Env) -> AtomRet {
         "loop" => op_loop(args, env),
         "recur" => Ok(ast.clone()),
         "defmacro" => op_macro(args, env),
-        "eval" => eval(eval(safe_get(args, 1), env)?, env),
+        "eval" => eval(&eval(&safe_get(args, 1), env)?, env),
         "do" => {
-            let evaled_args = eval_ast(c_list(&args[1..]), env)?;
+            let evaled_args = eval_ast(&c_list(&args[1..]), env)?;
             match evaled_args.get_list() {
                 Ok(args) => Ok(args.last().unwrap_or(&c_nil()).clone()),
                 _ => Ok(c_nil()),
             }
         }
-        "macroexpand" => op_macroexpand(eval_exp(safe_get(args, 1), env)?, env),
+        "macroexpand" => op_macroexpand(&eval_exp(&safe_get(args, 1), env)?, env),
         // Some function call with evaled arguments
         _ => {
-            let evaled_args = eval_ast(ast.clone(), env)?;
+            let evaled_args = eval_ast(ast, env)?;
             let args = match evaled_args.get_list() {
                 Ok(args) => args,
                 _ => return Err(AtomError::InvalidOperation(op_name.to_string())),
@@ -184,16 +185,16 @@ fn eval_list_elements(list: &[AtomVal], env: &Env) -> Result<Vec<AtomVal>, AtomE
     let mut evaled_elements = Vec::with_capacity(list.len());
 
     for element in list {
-        evaled_elements.push(eval(element.clone(), env)?);
+        evaled_elements.push(eval(element, env)?);
     }
 
     Ok(evaled_elements)
 }
 
-fn eval_ast(ast: AtomVal, env: &Env) -> AtomRet {
+fn eval_ast(ast: &AtomVal, env: &Env) -> AtomRet {
     trace!("fn=eval_ast ast={}", ast.format(true));
 
-    match *ast {
+    match **ast {
         AtomType::List(ref args) => Ok(c_list(&eval_list_elements(args, env)?)),
         AtomType::Symbol(ref name) => {
             if let Some(atom) = env_get(&env, &ast) {
@@ -206,13 +207,13 @@ fn eval_ast(ast: AtomVal, env: &Env) -> AtomRet {
     }
 }
 
-pub fn eval(ast: AtomVal, env: &Env) -> AtomRet {
-    match *ast {
+pub fn eval(ast: &AtomVal, env: &Env) -> AtomRet {
+    match **ast {
         AtomType::List(_) => {
             let ast = op_macroexpand(ast, env)?;
             match *ast {
-                AtomType::List(_) => eval_exp(ast, env),
-                _ => eval_ast(ast, env),
+                AtomType::List(_) => eval_exp(&ast, env),
+                _ => eval_ast(&ast, env),
             }
         }
         _ => eval_ast(ast, env),
@@ -229,7 +230,7 @@ pub fn eval_str(str: &str, env: &Env) -> AtomRet {
                 Ok(ast) => {
                     // print!("{} -> ast: {}\n", prefix, ast.format(true));
 
-                    match eval(ast, env) {
+                    match eval(&ast, env) {
                         Ok(result) => {
                             return Ok(result);
                         }
@@ -277,17 +278,17 @@ mod tests {
 
     #[test]
     fn eval_symbol() {
-        eval(c_symbol("Test".to_string()), &env()).unwrap_err();
+        eval(&c_symbol("Test".to_string()), &env()).unwrap_err();
     }
 
     #[test]
     fn eval_int() {
-        assert_eq!("2", print(eval(c_int(2), &env())));
+        assert_eq!("2", print(eval(&c_int(2), &env())));
     }
 
     #[test]
     fn eval_list_invalid_type_because_operation_is_int() {
-        match eval(c_list(&[c_int(1), c_int(2)]), &env()) {
+        match eval(&c_list(&[c_int(1), c_int(2)]), &env()) {
             Err(AtomError::InvalidType(_, _)) => {}
             Err(_) => unreachable!(),
             Ok(_) => unreachable!(),
@@ -296,7 +297,7 @@ mod tests {
 
     #[test]
     fn eval_list_invalid_operation() {
-        match eval(c_list(&[c_symbol("undefined".to_string()), c_int(2)]),
+        match eval(&c_list(&[c_symbol("undefined".to_string()), c_int(2)]),
                    &env()) {
             Err(AtomError::UndefinedSymbol(_)) => {}
             Err(_) => unreachable!(),
@@ -307,14 +308,14 @@ mod tests {
     #[test]
     fn eval_list_add() {
         assert_eq!("3",
-                   print(eval(c_list(&[c_symbol("+".to_string()), c_int(1), c_int(2)]),
+                   print(eval(&c_list(&[c_symbol("+".to_string()), c_int(1), c_int(2)]),
                               &env())));
     }
 
     #[test]
     fn eval_list_div() {
         assert_eq!("2",
-                   print(eval(c_list(&[c_symbol("/".to_string()), c_int(4), c_int(2)]),
+                   print(eval(&c_list(&[c_symbol("/".to_string()), c_int(4), c_int(2)]),
                               &env())));
     }
 }
