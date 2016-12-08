@@ -9,7 +9,7 @@ use env::{c_env, env_bind, env_set, Env};
 pub enum AtomType {
     Nil,
     Int(i64),
-    Symbol(String),
+    Symbol(Rc<String>),
     List(Vec<AtomVal>),
     Vec(Vec<AtomVal>),
     Func(AtomFunc),
@@ -202,7 +202,7 @@ pub fn c_int(num: i64) -> AtomVal {
 }
 
 pub fn c_symbol(symbol: String) -> AtomVal {
-    Rc::new(AtomType::Symbol(symbol))
+    Rc::new(AtomType::Symbol(Rc::new(symbol)))
 }
 
 pub fn c_list(seq: &[AtomVal]) -> AtomVal {

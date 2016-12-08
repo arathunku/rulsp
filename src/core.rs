@@ -9,7 +9,7 @@ fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
 }
 
-fn int_op<F>(f: F, default: i64, args: &[AtomVal]) -> AtomRet
+fn int_op<F>(f: F, args: &[AtomVal]) -> AtomRet
     where F: Fn(i64, i64) -> AtomRet
 {
 
@@ -31,21 +31,20 @@ fn int_op<F>(f: F, default: i64, args: &[AtomVal]) -> AtomRet
 
 }
 
-
 fn add(args: &[AtomVal]) -> AtomRet {
-    int_op(|acc, v| Ok(c_int(acc + v)), 0, args)
+    int_op(|acc, v| Ok(c_int(acc + v)), args)
 }
 
 fn sub(args: &[AtomVal]) -> AtomRet {
-    int_op(|acc, v| Ok(c_int(acc - v)), 0, args)
+    int_op(|acc, v| Ok(c_int(acc - v)), args)
 }
 
 fn mul(args: &[AtomVal]) -> AtomRet {
-    int_op(|acc, v| Ok(c_int(acc * v)), 1, args)
+    int_op(|acc, v| Ok(c_int(acc * v)), args)
 }
 
 fn div(args: &[AtomVal]) -> AtomRet {
-    int_op(|acc, v| Ok(c_int(acc / v)), 1, args)
+    int_op(|acc, v| Ok(c_int(acc / v)), args)
 }
 
 fn cons(args: &[AtomVal]) -> AtomRet {

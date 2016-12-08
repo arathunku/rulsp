@@ -7,7 +7,7 @@ use fnv::FnvHashMap;
 #[derive(PartialEq)]
 pub struct EnvType {
     parent: Option<Env>,
-    data: FnvHashMap<String, AtomVal>,
+    data: FnvHashMap<Rc<String>, AtomVal>,
 }
 
 pub type Env = Rc<RefCell<EnvType>>;
@@ -71,7 +71,7 @@ fn env_find(env: &Env, key: &AtomVal) -> Option<(Env, AtomVal)> {
 pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) -> AtomRet {
     match **key {
         AtomType::Symbol(ref str) => {
-            env.borrow_mut().data.insert(str.to_string(), value);
+            env.borrow_mut().data.insert(str.clone(), value);
             Ok(c_nil())
         }
         _ => unreachable!(),
