@@ -18,7 +18,7 @@ fn op_def(args: &[AtomVal], env: &Env) -> AtomRet {
     let value = eval(&safe_get(args, 2), env)?;
 
     let _ = env_set(&env, &name_atom, value);
-    Result::Ok(c_symbol(name.to_string()))
+    Result::Ok(c_symbol(name))
 }
 
 fn op_lambda(args: &[AtomVal], env: &Env) -> AtomRet {
@@ -105,7 +105,7 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
     let mut arguments_values = eval_list_elements(&values_for_eval, &env)?;
 
     let mut result = None;
-    let recur_symbol = c_symbol("recur".to_string());
+    let recur_symbol = c_symbol("recur");
     loop {
         env_bind(&env, &arguments_names, &arguments_values)?;
         result = Some(eval(body, &env)?);
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn eval_symbol() {
-        eval(&c_symbol("Test".to_string()), &env()).unwrap_err();
+        eval(&c_symbol("Test"), &env()).unwrap_err();
     }
 
     #[test]
@@ -297,8 +297,7 @@ mod tests {
 
     #[test]
     fn eval_list_invalid_operation() {
-        match eval(&c_list(&[c_symbol("undefined".to_string()), c_int(2)]),
-                   &env()) {
+        match eval(&c_list(&[c_symbol("undefined"), c_int(2)]), &env()) {
             Err(AtomError::UndefinedSymbol(_)) => {}
             Err(_) => unreachable!(),
             Ok(_) => unreachable!(),
@@ -308,14 +307,12 @@ mod tests {
     #[test]
     fn eval_list_add() {
         assert_eq!("3",
-                   print(eval(&c_list(&[c_symbol("+".to_string()), c_int(1), c_int(2)]),
-                              &env())));
+                   print(eval(&c_list(&[c_symbol("+"), c_int(1), c_int(2)]), &env())));
     }
 
     #[test]
     fn eval_list_div() {
         assert_eq!("2",
-                   print(eval(&c_list(&[c_symbol("/".to_string()), c_int(4), c_int(2)]),
-                              &env())));
+                   print(eval(&c_list(&[c_symbol("/"), c_int(4), c_int(2)]), &env())));
     }
 }

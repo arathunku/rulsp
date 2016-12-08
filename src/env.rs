@@ -109,8 +109,8 @@ mod tests {
     #[test]
     fn test_set() {
         let env = c_env(None);
-        env_set(&env, &c_symbol(String::from("Test")), c_int(10));
-        env_set(&env, &c_symbol(String::from("Gra")), c_int(5));
+        env_set(&env, &c_symbol("Test"), c_int(10));
+        env_set(&env, &c_symbol("Gra"), c_int(5));
 
         assert_eq!(format!("{}", *env.borrow()), "{Gra 5 Test 10}");
     }
@@ -118,18 +118,17 @@ mod tests {
     #[test]
     fn test_get() {
         let env = c_env(None);
-        let key = c_symbol(String::from("Test"));
+        let key = c_symbol("Test");
         env_set(&env, &key.clone(), c_int(10));
 
         let child = c_env(Some(env));
-        env_set(&child, &c_symbol(String::from("TestChild")), c_int(20));
+        env_set(&child, &c_symbol("TestChild"), c_int(20));
 
 
         let grandchild = c_env(Some(child));
 
         assert_eq!(format!("{}", env_get(&grandchild, &key).unwrap()), "10");
-        assert_eq!(format!("{}",
-                           env_get(&grandchild, &c_symbol(String::from("TestChild"))).unwrap()),
+        assert_eq!(format!("{}", env_get(&grandchild, &c_symbol("TestChild")).unwrap()),
                    "20");
     }
 
@@ -137,6 +136,6 @@ mod tests {
     fn test_get_missing_value() {
         let env = c_env(None);
 
-        assert!(env_get(&env, &c_symbol(String::from("Missing"))).is_none());
+        assert!(env_get(&env, &c_symbol("Missing")).is_none());
     }
 }

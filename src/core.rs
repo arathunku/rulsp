@@ -145,25 +145,25 @@ fn _print(args: &[AtomVal]) -> AtomRet {
 pub fn build() -> Env {
     let env = c_env(None);
 
-    env_set(&env, &c_symbol("print".to_string()), c_func(print));
-    env_set(&env, &c_symbol("println".to_string()), c_func(println));
-    env_set(&env, &c_symbol("_print".to_string()), c_func(_print));
-    env_set(&env, &c_symbol("_println".to_string()), c_func(_println));
-    env_set(&env, &c_symbol("+".to_string()), c_func(add));
-    env_set(&env, &c_symbol("-".to_string()), c_func(sub));
-    env_set(&env, &c_symbol("*".to_string()), c_func(mul));
-    env_set(&env, &c_symbol("/".to_string()), c_func(div));
-    env_set(&env, &c_symbol("cons".to_string()), c_func(cons));
-    env_set(&env, &c_symbol("list".to_string()), c_func(list));
-    env_set(&env, &c_symbol("list?".to_string()), c_func(is_list));
-    env_set(&env, &c_symbol("nil?".to_string()), c_func(is_nil));
-    env_set(&env, &c_symbol("nth".to_string()), c_func(nth));
-    env_set(&env, &c_symbol("rest".to_string()), c_func(rest));
-    env_set(&env, &c_symbol("count".to_string()), c_func(count));
+    env_set(&env, &c_symbol("print"), c_func(print));
+    env_set(&env, &c_symbol("println"), c_func(println));
+    env_set(&env, &c_symbol("_print"), c_func(_print));
+    env_set(&env, &c_symbol("_println"), c_func(_println));
+    env_set(&env, &c_symbol("+"), c_func(add));
+    env_set(&env, &c_symbol("-"), c_func(sub));
+    env_set(&env, &c_symbol("*"), c_func(mul));
+    env_set(&env, &c_symbol("/"), c_func(div));
+    env_set(&env, &c_symbol("cons"), c_func(cons));
+    env_set(&env, &c_symbol("list"), c_func(list));
+    env_set(&env, &c_symbol("list?"), c_func(is_list));
+    env_set(&env, &c_symbol("nil?"), c_func(is_nil));
+    env_set(&env, &c_symbol("nth"), c_func(nth));
+    env_set(&env, &c_symbol("rest"), c_func(rest));
+    env_set(&env, &c_symbol("count"), c_func(count));
 
     // predicates
-    env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
-    // env_set(&env, &c_symbol("=".to_string()), c_func(partialeq));
+    env_set(&env, &c_symbol("="), c_func(partialeq));
+    // env_set(&env, &c_symbol("="), c_func(partialeq));
 
 
     let mut f = File::open("src/core.clrs").expect("core.clrs has to be openable");

@@ -102,7 +102,7 @@ mod tests {
         let ref env = env();
         eval_str("(def foo 1)", env);
 
-        assert_eq!(env_get(&env, &c_symbol("foo".to_string())).unwrap(),
+        assert_eq!(env_get(&env, &c_symbol("foo")).unwrap(),
                    c_int(1));
     }
 
@@ -170,7 +170,7 @@ mod tests {
         eval_str("(defmacro ignore (fn* (x) (list 'quote x))))", &env);
 
         assert_eq!(eval_str("(ignore foo)", &env).expect("This shouldn't fail because foo is ignored"),
-                   c_symbol("foo".to_string()));
+                   c_symbol("foo"));
 
         assert_eq!(eval_str("foo", &env).unwrap_err(), AtomError::UndefinedSymbol("foo".to_string()));
     }

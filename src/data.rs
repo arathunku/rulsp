@@ -109,7 +109,7 @@ impl AtomType {
                 let func_env = c_env(Some(fd.env.clone()));
                 match *fd.params {
                     AtomType::List(ref params) => {
-                        let ampersand = c_symbol("&".to_string());
+                        let ampersand = c_symbol("&");
                         // println!("params={:?} args={:?}", params, args);
                         env_bind(&func_env, params, &args)?;
 
@@ -203,8 +203,8 @@ pub fn c_int(num: i64) -> AtomVal {
     Rc::new(AtomType::Int(num))
 }
 
-pub fn c_symbol(symbol: String) -> AtomVal {
-    Rc::new(AtomType::Symbol(Rc::new(symbol)))
+pub fn c_symbol(symbol: &str) -> AtomVal {
+    Rc::new(AtomType::Symbol(Rc::new(symbol.to_string())))
 }
 
 pub fn c_list(seq: &[AtomVal]) -> AtomVal {
@@ -247,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_symbol() {
-        assert_eq!(format!("{}", c_symbol(String::from("test"))), "test");
+        assert_eq!(format!("{}", c_symbol("test")), "test");
     }
 
     #[test]
