@@ -107,6 +107,7 @@ fn op_loop(args: &[AtomVal], env: Env) -> AtomRet {
     let mut arguments_values = eval_list_elements(&values_for_eval, env.clone())?;
 
     let mut result = None;
+    let recur_symbol = c_symbol("recur".to_string());
     loop {
         env_bind(&env, &arguments_names, &arguments_values)?;
         result = Some(eval(body.clone(), env.clone())?);
@@ -114,7 +115,7 @@ fn op_loop(args: &[AtomVal], env: Env) -> AtomRet {
         if let Some(ref result) = result {
             match result.get_list() {
                 Ok(list) => {
-                    if safe_get(list, 0) == c_symbol("recur".to_string()) {
+                    if safe_get(list, 0) == recur_symbol {
                         arguments_values = eval_list_elements(&list[1..], env.clone())?;
                     } else {
                         break;
