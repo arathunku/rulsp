@@ -9,38 +9,43 @@ fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
     args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
 }
 
-fn int_op<F>(f: F, args: &[AtomVal]) -> AtomRet
-    where F: FnOnce(Vec<i64>) -> i64
+fn int_op<F>(f: F, default: i64, args: &[AtomVal]) -> AtomRet
+    where F: Fn(i64, i64) -> AtomRet
 {
 
-    let ints: Result<Vec<i64>, _> = args.iter().map(|v| v.get_int()).collect();
-    Result::Ok(c_int(f(ints?)))
+    if args.len() > 0 {
+        let first = args[0].clone();
+
+        Ok(c_int(args.iter()
+            .skip(1)
+            .fold(Ok(first), |acc, x| {
+                let acc = acc?.get_int()?;
+                let el = x.get_int()?;
+
+                f(acc, el)
+            })?
+            .get_int()?))
+    } else {
+        Ok(c_nil())
+    }
+
 }
 
+
 fn add(args: &[AtomVal]) -> AtomRet {
-    int_op(|values| values.iter().fold(0i64, |acc, v| acc + v), args)
+    int_op(|acc, v| Ok(c_int(acc + v)), 0, args)
 }
 
 fn sub(args: &[AtomVal]) -> AtomRet {
-    int_op(|values| {
-               values.iter()
-                   .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y - x)))
-                   .unwrap_or(0)
-           },
-           args)
+    int_op(|acc, v| Ok(c_int(acc - v)), 0, args)
 }
 
 fn mul(args: &[AtomVal]) -> AtomRet {
-    int_op(|values| values.iter().fold(1i64, |acc, v| acc * v), args)
+    int_op(|acc, v| Ok(c_int(acc * v)), 1, args)
 }
 
 fn div(args: &[AtomVal]) -> AtomRet {
-    int_op(|values| {
-               values.iter()
-                   .fold(None, |acc, x| acc.map_or(Some(*x), |y| Some(y / x)))
-                   .unwrap_or(0)
-           },
-           args)
+    int_op(|acc, v| Ok(c_int(acc / v)), 1, args)
 }
 
 fn cons(args: &[AtomVal]) -> AtomRet {

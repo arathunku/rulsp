@@ -1,3 +1,4 @@
+; -*- mode: clojure;-*-
 (do
   (def first (fn* (coll) (nth coll 0)))
   (def second (fn* (coll) (nth coll 1)))
