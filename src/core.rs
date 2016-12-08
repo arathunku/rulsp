@@ -6,7 +6,7 @@ use data::{AtomVal, AtomType, AtomRet, c_int, c_nil, c_list, c_symbol, c_func};
 use eval::eval_str;
 
 fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
-    args.get(index).map(|v| v.clone()).unwrap_or(c_nil())
+    args.get(index).cloned().unwrap_or_else(c_nil)
 }
 
 fn int_op<F>(f: F, args: &[AtomVal]) -> AtomRet

@@ -4,7 +4,7 @@ use lexer::lex;
 use parser::Parser;
 
 fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
-    args.get(index).unwrap_or(&c_nil()).clone()
+    args.get(index).cloned().unwrap_or_else(c_nil)
 }
 
 fn op_quote(args: &[AtomVal]) -> AtomRet {
@@ -33,8 +33,8 @@ fn op_macro(args: &[AtomVal], env: &Env) -> AtomRet {
     }
 }
 
-fn is_macro_call(ast: AtomVal, env: &Env) -> bool {
-    match *ast {
+fn is_macro_call(ast: &AtomVal, env: &Env) -> bool {
+    match **ast {
         AtomType::List(ref args) => {
             if let Some(value) = env_get(&env, &args[0]) {
                 match *value {
@@ -52,7 +52,7 @@ fn is_macro_call(ast: AtomVal, env: &Env) -> bool {
 fn op_macroexpand(ast: &AtomVal, env: &Env) -> AtomRet {
     // println!("IS MACRO CALL: {:?}", ast);
     let mut ast = ast.clone();
-    while is_macro_call(ast.clone(), env) {
+    while is_macro_call(&ast, env) {
         let new_ast = ast.clone();
 
         let args = match *new_ast {
@@ -127,7 +127,7 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
 
     }
 
-    Ok(result.unwrap_or(c_nil()))
+    Ok(result.unwrap_or_else(c_nil))
 }
 
 pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
@@ -158,7 +158,7 @@ pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
         "do" => {
             let evaled_args = eval_ast(&c_list(&args[1..]), env)?;
             match evaled_args.get_list() {
-                Ok(args) => Ok(args.last().unwrap_or(&c_nil()).clone()),
+                Ok(args) => Ok(args.last().cloned().unwrap_or_else(c_nil)),
                 _ => Ok(c_nil()),
             }
         }
@@ -174,7 +174,7 @@ pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
             trace!("fn=eval_exp op_name={} args={:?}",
                    op_name,
                    args[1..].to_vec());
-            let subject_func = &args[0].clone();
+            let subject_func = &args[0];
             subject_func.apply(&args[1..])
         }
 
