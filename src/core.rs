@@ -170,7 +170,7 @@ pub fn build() -> Env {
     let mut s = String::new();
     f.read_to_string(&mut s).expect("Couldn't read core.clrs");
 
-    eval_str(s.as_str(), env.clone()).expect("Problem loading core.clrs into ENV");
+    eval_str(s.as_str(), &env).expect("Problem loading core.clrs into ENV");
 
     env
 }

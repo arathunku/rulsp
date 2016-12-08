@@ -27,7 +27,7 @@ use env::{Env};
 use eval::eval_str;
 
 #[allow(dead_code)]
-fn repl(env: Env) {
+fn repl(env: &Env) {
     let mut rl = Editor::<()>::new();
     if let Err(_) = rl.load_history("history.txt") {
         println!("No previous history.");
@@ -38,7 +38,7 @@ fn repl(env: Env) {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                let result = eval_str(line.as_str(), env.clone());
+                let result = eval_str(line.as_str(), env);
                 match result {
                     Ok(result) => println!(">> {}", result),
                     Err(err) => println!(">> {:?}", err)
@@ -62,9 +62,9 @@ fn repl(env: Env) {
 }
 
 #[allow(unused_must_use)]
-fn count(n: String, env: Env) {
-    eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
-    eval_str(&format!("(count-1 {})", n), env.clone());
+fn count(n: String, env: &Env) {
+    eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env);
+    eval_str(&format!("(count-1 {})", n), env);
 }
 
 fn main() {
@@ -74,9 +74,9 @@ fn main() {
     match std::env::args().nth(1) {
         Some(value) => {
             if "repl" == value  {
-                repl(env);
+                repl(&env);
             } else {
-                count(value, env)
+                count(value, &env)
             }
         },
         None => {
@@ -99,8 +99,8 @@ mod tests {
 
     #[test]
     fn eval_ast_define() {
-        let env = env();
-        eval_str("(def foo 1)", env.clone());
+        let ref env = env();
+        eval_str("(def foo 1)", env);
 
         assert_eq!(env_get(&env, &c_symbol("foo".to_string())).unwrap(),
                    c_int(1));
@@ -108,71 +108,71 @@ mod tests {
 
     #[test]
     fn eval_ast_lambda() {
-        let env = env();
-        assert_eq!(eval_str("((fn* (x) (- x 2)) 7)", env.clone()).unwrap(),
+        let ref env = env();
+        assert_eq!(eval_str("((fn* (x) (- x 2)) 7)", env).unwrap(),
                    c_int(5));
     }
 
     #[test]
     fn eval_str_lambda_nested() {
-        let env = env();
-        eval_str("(def make-adder (fn* (x) (fn* (y) (+ x y))))", env.clone());
-        eval_str("(def add-two (make-adder 2))", env.clone());
+        let ref env = env();
+        eval_str("(def make-adder (fn* (x) (fn* (y) (+ x y))))", env);
+        eval_str("(def add-two (make-adder 2))", env);
 
-        assert_eq!(eval_str("(add-two 5)", env.clone()).unwrap(),
+        assert_eq!(eval_str("(add-two 5)", env).unwrap(),
                    c_int(7));
     }
 
     #[test]
     fn eval_str_simple_if() {
-        let env = env();
+        let ref env = env();
 
-        assert_eq!(eval_str("(if nil (+ 2 2) (+ 1 1))", env.clone()).unwrap(),
+        assert_eq!(eval_str("(if nil (+ 2 2) (+ 1 1))", env).unwrap(),
                    c_int(2));
-        assert_eq!(eval_str("(if 1 (+ 2 2) (+ 1 1))", env.clone()).unwrap(),
+        assert_eq!(eval_str("(if 1 (+ 2 2) (+ 1 1))", env).unwrap(),
                    c_int(4));
     }
 
     #[test]
     fn eval_str_predicated() {
-        assert_eq!(eval_str("(= 2 2)", env()).unwrap(),
+        assert_eq!(eval_str("(= 2 2)", &env()).unwrap(),
                    c_int(1));
 
         let env = env();
-        eval_str("(def foo 2)", env.clone());
-        assert_eq!(eval_str("(= 2 foo)", env.clone()).unwrap(),
+        eval_str("(def foo 2)", &env);
+        assert_eq!(eval_str("(= 2 foo)", &env).unwrap(),
                    c_int(1));
     }
 
     #[test]
     fn eval_str_variadic_func() {
-        assert_eq!(eval_str("((fn* (x y) y) 2 3)", env()).unwrap(),
+        assert_eq!(eval_str("((fn* (x y) y) 2 3)", &env()).unwrap(),
                    c_int(3));
 
-        assert_eq!(eval_str("((fn* (x & y) y) 1)", env()).unwrap(),
+        assert_eq!(eval_str("((fn* (x & y) y) 1)", &env()).unwrap(),
                    c_nil());
-        assert_eq!(eval_str("((fn* (x & y) y) 1 2 3)", env()).unwrap(),
+        assert_eq!(eval_str("((fn* (x & y) y) 1 2 3)", &env()).unwrap(),
                    c_list(&[c_int(2), c_int(3)]));
-        assert_eq!(eval_str("((fn* (x & y) x) 2)", env()).unwrap(),
+        assert_eq!(eval_str("((fn* (x & y) x) 2)", &env()).unwrap(),
                    c_int(2));
 
-        let env = env();
-        eval_str("(def sum-list (fn* (xs) (if (= 0 (count xs)) 0 (+ (nth xs 0) (sum-list (rest xs))))))", env.clone());
-        eval_str("(def add (fn* (& xs) (sum-list xs)))", env.clone());
+        let ref env = env();
+        eval_str("(def sum-list (fn* (xs) (if (= 0 (count xs)) 0 (+ (nth xs 0) (sum-list (rest xs))))))", env);
+        eval_str("(def add (fn* (& xs) (sum-list xs)))", env);
 
-        assert_eq!(eval_str("(add 3 4 5)", env.clone()).unwrap(),
+        assert_eq!(eval_str("(add 3 4 5)", env).unwrap(),
                    c_int(12));
     }
 
     #[test]
     fn eval_str_macro() {
         let env = env();
-        eval_str("(defmacro ignore (fn* (x) (list 'quote x))))", env.clone());
+        eval_str("(defmacro ignore (fn* (x) (list 'quote x))))", &env);
 
-        assert_eq!(eval_str("(ignore foo)", env.clone()).expect("This shouldn't fail because foo is ignored"),
+        assert_eq!(eval_str("(ignore foo)", &env).expect("This shouldn't fail because foo is ignored"),
                    c_symbol("foo".to_string()));
 
-        assert_eq!(eval_str("foo", env.clone()).unwrap_err(), AtomError::UndefinedSymbol("foo".to_string()));
+        assert_eq!(eval_str("foo", &env).unwrap_err(), AtomError::UndefinedSymbol("foo".to_string()));
     }
 
 
@@ -180,7 +180,7 @@ mod tests {
     fn eval_str_eval_str_backquote_splicing() {
         let env = env();
 
-        assert_eq!(eval_str("(eval `(+ ~@(list 1 2 3)))", env.clone()).unwrap(), c_int(6));
+        assert_eq!(eval_str("(eval `(+ ~@(list 1 2 3)))", &env).unwrap(), c_int(6));
     }
 
 
@@ -188,7 +188,7 @@ mod tests {
     fn eval_loop_recur() {
         let env = env();
 
-        assert_eq!(eval_str("(loop (x 2 acc 0) (if (= x 1) acc (recur (- x 1) (+ acc x))))", env.clone()).unwrap(), c_int(2));
+        assert_eq!(eval_str("(loop (x 2 acc 0) (if (= x 1) acc (recur (- x 1) (+ acc x))))", &env).unwrap(), c_int(2));
     }
 
 
@@ -197,10 +197,10 @@ mod tests {
     #[bench]
     fn bench_counting(b: &mut Bencher) {
         let env = env();
-        eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", env.clone());
+        eval_str("(def count-1 (fn* (n) (loop (n n acc 0) (if (= n 0) acc (recur (- n 1) (+ acc 1))))))", &env);
 
         b.iter(|| {
-            eval_str("(count-1 1000)", env.clone());
+            eval_str("(count-1 1000)", &env);
         });
     }
 }
