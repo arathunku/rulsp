@@ -193,8 +193,10 @@ impl Display for AtomError {
 pub type AtomVal = Rc<AtomType>;
 pub type AtomRet = result::Result<AtomVal, AtomError>;
 
+thread_local!(static NIL: AtomVal = Rc::new(AtomType::Nil));
+
 pub fn c_nil() -> AtomVal {
-    Rc::new(AtomType::Nil)
+    NIL.with(|v| v.clone())
 }
 
 pub fn c_int(num: i64) -> AtomVal {
