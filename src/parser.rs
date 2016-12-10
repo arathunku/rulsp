@@ -37,7 +37,6 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: &Vec<Token>) -> Parser {
-        // TODO: avoid clone!!!
         Parser { tokens: tokens.clone() }
     }
 
