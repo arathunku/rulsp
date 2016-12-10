@@ -49,21 +49,23 @@ pub fn c_env(env: Option<Env>) -> Env {
     }))
 }
 
-fn env_find(env: &Env, key: &AtomVal) -> Option<(Env, AtomVal)> {
-    match **key {
-        AtomType::Symbol(ref str) => {
-            let env_borrow = env.borrow();
-            match env_borrow.data.get(str) {
-                Some(value) => Some((env.clone(), value.clone())),
-                None => {
-                    if let Some(ref parent) = env_borrow.parent {
-                        env_find(parent, key)
-                    } else {
-                        None
-                    }
-                }
+fn env_find_inner(env: &Env, key: &Rc<String>) -> Option<(Env, AtomVal)> {
+    let env_borrow = env.borrow();
+    match env_borrow.data.get(key) {
+        Some(value) => Some((env.clone(), value.clone())),
+        None => {
+            if let Some(ref parent) = env_borrow.parent {
+                env_find_inner(parent, key)
+            } else {
+                None
             }
         }
+    }
+}
+
+fn env_find(env: &Env, key: &AtomVal) -> Option<(Env, AtomVal)> {
+    match **key {
+        AtomType::Symbol(ref str) => env_find_inner(env, str),
         _ => None,
     }
 }

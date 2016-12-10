@@ -48,8 +48,8 @@ fn div(args: &[AtomVal]) -> AtomRet {
 }
 
 fn cons(args: &[AtomVal]) -> AtomRet {
-    let mut list = safe_get(args.clone(), 1).get_list()?.clone();
-    list.insert(0, safe_get(args.clone(), 0));
+    let mut list = vec![safe_get(args, 0)];
+    list.extend(safe_get(args, 1).get_list()?.iter().cloned());
     Ok(c_list(&list))
 }
 
@@ -58,14 +58,14 @@ fn list(args: &[AtomVal]) -> AtomRet {
 }
 
 fn is_list(args: &[AtomVal]) -> AtomRet {
-    match *safe_get(args.clone(), 0) {
+    match *safe_get(args, 0) {
         AtomType::List(_) => Ok(c_int(1)),
         _ => Ok(c_nil()),
     }
 }
 
 fn is_nil(args: &[AtomVal]) -> AtomRet {
-    match *safe_get(args.clone(), 0) {
+    match *safe_get(args, 0) {
         AtomType::Nil => Ok(c_int(1)),
         _ => Ok(c_nil()),
     }
@@ -73,20 +73,20 @@ fn is_nil(args: &[AtomVal]) -> AtomRet {
 
 
 fn count(args: &[AtomVal]) -> AtomRet {
-    Ok(c_int(safe_get(args.clone(), 0).get_list()?.len() as i64))
+    Ok(c_int(safe_get(args, 0).get_list()?.len() as i64))
 }
 
 
 fn nth(args: &[AtomVal]) -> AtomRet {
     trace!("action=nth args={:?}", args);
-    let n = safe_get(args.clone(), 1).get_int().unwrap_or(0);
+    let n = safe_get(args, 1).get_int().unwrap_or(0);
 
-    Ok(safe_get(&safe_get(args.clone(), 0).get_list()?.clone(), n as usize))
+    Ok(safe_get(&safe_get(args, 0).get_list()?, n as usize))
 }
 
 
 fn rest(args: &[AtomVal]) -> AtomRet {
-    match safe_get(args.clone(), 0).get_list() {
+    match safe_get(args, 0).get_list() {
         Ok(seq) => {
             if seq.len() > 0 {
                 Ok(c_list(&seq[1..seq.len()]))

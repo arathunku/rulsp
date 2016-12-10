@@ -8,7 +8,7 @@ fn safe_get(args: &[AtomVal], index: usize) -> AtomVal {
 }
 
 fn op_quote(args: &[AtomVal]) -> AtomRet {
-    Result::Ok(safe_get(args, 1))
+    Ok(safe_get(args, 1))
 }
 
 fn op_def(args: &[AtomVal], env: &Env) -> AtomRet {
@@ -18,7 +18,7 @@ fn op_def(args: &[AtomVal], env: &Env) -> AtomRet {
     let value = eval(&safe_get(args, 2), env)?;
 
     let _ = env_set(&env, &name_atom, value);
-    Result::Ok(c_symbol(name))
+    Ok(c_symbol(name))
 }
 
 fn op_lambda(args: &[AtomVal], env: &Env) -> AtomRet {
@@ -105,7 +105,6 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
     let mut arguments_values = eval_list_elements(&values_for_eval, &env)?;
 
     let mut result = None;
-    let recur_symbol = c_symbol("recur");
     loop {
         env_bind(&env, &arguments_names, &arguments_values)?;
         result = Some(eval(body, &env)?);
@@ -113,7 +112,7 @@ fn op_loop(args: &[AtomVal], env: &Env) -> AtomRet {
         if let Some(ref result) = result {
             match result.get_list() {
                 Ok(list) => {
-                    if safe_get(list, 0) == recur_symbol {
+                    if safe_get(list, 0).is_symbol("recur") {
                         arguments_values = eval_list_elements(&list[1..], &env)?;
                     } else {
                         break;
@@ -156,11 +155,8 @@ pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
         "defmacro" => op_macro(args, env),
         "eval" => eval(&eval(&safe_get(args, 1), env)?, env),
         "do" => {
-            let evaled_args = eval_ast(&c_list(&args[1..]), env)?;
-            match evaled_args.get_list() {
-                Ok(args) => Ok(args.last().cloned().unwrap_or_else(c_nil)),
-                _ => Ok(c_nil()),
-            }
+            let evaled_args = eval_list_elements(&args[1..], env)?;
+            Ok(evaled_args.last().cloned().unwrap_or_else(c_nil))
         }
         "macroexpand" => op_macroexpand(&eval_exp(&safe_get(args, 1), env)?, env),
         // Some function call with evaled arguments
@@ -171,9 +167,7 @@ pub fn eval_exp(ast: &AtomVal, env: &Env) -> AtomRet {
                 _ => return Err(AtomError::InvalidOperation(op_name.to_string())),
             };
 
-            trace!("fn=eval_exp op_name={} args={:?}",
-                   op_name,
-                   args[1..].to_vec());
+            trace!("fn=eval_exp op_name={} args={:?}", op_name, &args[1..]);
             let subject_func = &args[0];
             subject_func.apply(&args[1..])
         }
@@ -195,14 +189,14 @@ fn eval_ast(ast: &AtomVal, env: &Env) -> AtomRet {
     trace!("fn=eval_ast ast={}", ast.format(true));
 
     match **ast {
-        AtomType::List(ref args) => Ok(c_list(&eval_list_elements(args, env)?)),
         AtomType::Symbol(ref name) => {
             if let Some(atom) = env_get(&env, &ast) {
-                Ok(atom.clone())
+                Ok(atom)
             } else {
                 Err(AtomError::UndefinedSymbol(name.to_string()))
             }
         }
+        AtomType::List(ref args) => Ok(c_list(&eval_list_elements(args, env)?)),
         _ => Ok(ast.clone()),
     }
 }
