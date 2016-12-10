@@ -6,11 +6,6 @@
   (def empty? (fn* (coll)
                    (if (nil? coll) 1 (= (count coll) 0))))
   (def not (fn* (v) (if v nil 1)))
-  (def reduce
-    (fn* (f val coll)
-         (if (empty? coll)
-           val
-           (reduce f (f (first coll) val) (rest coll)))))
   (def concat
     (fn* (a b)
          (if (empty? a)

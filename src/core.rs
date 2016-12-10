@@ -102,7 +102,6 @@ fn rest(args: &[AtomVal]) -> AtomRet {
 fn map(args: &[AtomVal]) -> AtomRet {
     let func_atom = safe_get(args, 0);
     let elements_atom = safe_get(args, 1);
-
     let elements = elements_atom.get_list()?;
 
     let mut new_elements: Vec<AtomVal> = Vec::with_capacity(elements.iter().count());
@@ -115,22 +114,20 @@ fn map(args: &[AtomVal]) -> AtomRet {
 }
 
 // [ func defaultValue coll]
-// fn reduce(args: &[AtomVal]) -> AtomRet {
-//     // (def reduce
-//     //  (fn* (f val coll)
-//     //   (if (empty? coll)
-//     //    val
-//     //    (reduce f (f (first coll) val) (rest coll)))))
-//     let func_atom = safe_get(args, 0);
-//     let elements_atom = safe_get(args, 2);
+fn reduce(args: &[AtomVal]) -> AtomRet {
+    let func_atom = safe_get(args, 0);
+    let elements_atom = safe_get(args, 2);
+    let elements = elements_atom.get_list()?;
 
-//     let mut last_result = safe_get(args, 1);
-//     for element in elements.iter() {
-//         last_result = func_atom.apply(&[c_list(&[element.clone()]), last_result])?
-//     }
+    let last_result = elements.iter()
+        .cloned()
+        .fold(Ok(safe_get(args, 1)), |acc_result, element| {
+            let acc = acc_result?;
+            func_atom.apply(&[element, acc])
+        })?;
 
-//     Ok(c_list(&[]))
-// }
+    Ok(last_result)
+}
 
 fn partialeq(args: &[AtomVal]) -> AtomRet {
     for (i, arg) in args.iter().enumerate() {
@@ -177,6 +174,12 @@ fn _print(args: &[AtomVal]) -> AtomRet {
 pub fn build() -> Env {
     let env = c_env(None);
 
+    let mut f = File::open("src/core.clrs").expect("core.clrs has to be openable");
+    let mut s = String::new();
+    f.read_to_string(&mut s).expect("Couldn't read core.clrs");
+
+    eval_str(s.as_str(), &env).expect("Problem loading core.clrs into ENV");
+
     env_set(&env, &c_symbol("print"), c_func(print));
     env_set(&env, &c_symbol("println"), c_func(println));
     env_set(&env, &c_symbol("_print"), c_func(_print));
@@ -193,17 +196,11 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("rest"), c_func(rest));
     env_set(&env, &c_symbol("count"), c_func(count));
     env_set(&env, &c_symbol("map"), c_func(map));
+    env_set(&env, &c_symbol("reduce"), c_func(reduce));
 
     // predicates
     env_set(&env, &c_symbol("="), c_func(partialeq));
     // env_set(&env, &c_symbol("="), c_func(partialeq));
-
-
-    let mut f = File::open("src/core.clrs").expect("core.clrs has to be openable");
-    let mut s = String::new();
-    f.read_to_string(&mut s).expect("Couldn't read core.clrs");
-
-    eval_str(s.as_str(), &env).expect("Problem loading core.clrs into ENV");
 
     env
 }

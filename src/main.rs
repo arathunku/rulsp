@@ -185,6 +185,20 @@ mod tests {
 
 
     #[test]
+    fn eval_map() {
+        let env = env();
+
+        assert_eq!(eval_str("(map (fn* (x) (+ x 1)) '(1 2))", &env).unwrap(), c_list(&[c_int(2), c_int(3)]));
+    }
+
+    #[test]
+    fn eval_reduce() {
+        let env = env();
+
+        assert_eq!(eval_str("(reduce + 0 '(1 2 3))", &env).unwrap(), c_int(6));
+    }
+
+    #[test]
     fn eval_loop_recur() {
         let env = env();
 
