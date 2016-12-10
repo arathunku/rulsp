@@ -1,4 +1,4 @@
-use super::data::{AtomVal, AtomType, AtomRet, c_nil};
+use super::data::{AtomVal, AtomType, c_nil, AtomError};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
@@ -70,11 +70,11 @@ fn env_find(env: &Env, key: &AtomVal) -> Option<(Env, AtomVal)> {
     }
 }
 
-pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) -> AtomRet {
+pub fn env_set(env: &Env, key: &AtomVal, value: AtomVal) -> Result<(), AtomError> {
     match **key {
         AtomType::Symbol(ref str) => {
             env.borrow_mut().data.insert(str.clone(), value);
-            Ok(c_nil())
+            Ok(())
         }
         _ => unreachable!(),
     }
@@ -88,11 +88,11 @@ pub fn env_get(env: &Env, key: &AtomVal) -> Option<AtomVal> {
     }
 }
 
-pub fn env_bind(env: &Env, params: &[AtomVal], args: &[AtomVal]) -> AtomRet {
+pub fn env_bind(env: &Env, params: &[AtomVal], args: &[AtomVal]) -> Result<(), AtomError> {
     for (index, param) in params.iter().enumerate() {
         env_set(env, param, args.get(index).cloned().unwrap_or_else(c_nil))?;
     }
-    Ok(c_nil())
+    Ok(())
 }
 
 #[allow(unused_must_use)]

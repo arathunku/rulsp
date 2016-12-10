@@ -1,11 +1,11 @@
 #!/usr/bin/bash
 cargo build --release && \
-    perf record -g target/release/rulsp 10000 && \
+    perf record -g target/release/rulsp 100000 && \
     perf script | ~/Applications/FlameGraph/stackcollapse-perf.pl | ~/Applications/FlameGraph/flamegraph.pl > flame-counting.svg
 
 
 rm callgrind.*
 cargo build --release && \
-    valgrind --tool=callgrind target/release/rulsp 10000
+    valgrind --tool=callgrind target/release/rulsp 100000
 
 callgrind_annotate callgrind.out.* | grep "[[:space:]]src\/*" | head -n 10

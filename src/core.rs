@@ -99,17 +99,15 @@ fn rest(args: &[AtomVal]) -> AtomRet {
 }
 
 fn partialeq(args: &[AtomVal]) -> AtomRet {
-    let mut output = c_int(1);
     for (i, arg) in args.iter().enumerate() {
-        let next_arg = args.get(i + 1);
-        if next_arg.is_some() {
-            if next_arg.unwrap() != arg {
-                output = c_nil();
-            };
+        if let Some(next_arg) = args.get(i + 1) {
+            if next_arg != arg {
+                return Ok(c_nil());
+            }
         }
     }
 
-    Ok(output)
+    Ok(c_int(1))
 }
 
 
