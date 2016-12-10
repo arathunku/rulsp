@@ -98,6 +98,40 @@ fn rest(args: &[AtomVal]) -> AtomRet {
     }
 }
 
+// [func coll]
+fn map(args: &[AtomVal]) -> AtomRet {
+    let func_atom = safe_get(args, 0);
+    let elements_atom = safe_get(args, 1);
+
+    let elements = elements_atom.get_list()?;
+
+    let mut new_elements: Vec<AtomVal> = Vec::with_capacity(elements.iter().count());
+
+    for element in elements.iter() {
+        new_elements.push(func_atom.apply(&[element.clone()])?)
+    }
+
+    Ok(c_list(&new_elements))
+}
+
+// [ func defaultValue coll]
+// fn reduce(args: &[AtomVal]) -> AtomRet {
+//     // (def reduce
+//     //  (fn* (f val coll)
+//     //   (if (empty? coll)
+//     //    val
+//     //    (reduce f (f (first coll) val) (rest coll)))))
+//     let func_atom = safe_get(args, 0);
+//     let elements_atom = safe_get(args, 2);
+
+//     let mut last_result = safe_get(args, 1);
+//     for element in elements.iter() {
+//         last_result = func_atom.apply(&[c_list(&[element.clone()]), last_result])?
+//     }
+
+//     Ok(c_list(&[]))
+// }
+
 fn partialeq(args: &[AtomVal]) -> AtomRet {
     for (i, arg) in args.iter().enumerate() {
         if let Some(next_arg) = args.get(i + 1) {
@@ -158,6 +192,7 @@ pub fn build() -> Env {
     env_set(&env, &c_symbol("nth"), c_func(nth));
     env_set(&env, &c_symbol("rest"), c_func(rest));
     env_set(&env, &c_symbol("count"), c_func(count));
+    env_set(&env, &c_symbol("map"), c_func(map));
 
     // predicates
     env_set(&env, &c_symbol("="), c_func(partialeq));
